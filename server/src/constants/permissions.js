@@ -1,0 +1,80 @@
+const ALL_PERMISSIONS = [
+  'users.create',
+  'users.edit',
+  'users.disable',
+  'users.resetPassword',
+  'users.import',
+  'roles.manage',
+  'classes.manage',
+  'subjects.manage',
+  'teachers.assign',
+  'students.enrol',
+  'parents.link',
+  'assignments.create',
+  'assignments.grade',
+  'marks.viewAll',
+  'marks.viewOwn',
+  'marks.viewChild',
+  'attendance.mark',
+  'ai.tutor.use',
+  'analytics.school',
+  'analytics.class',
+  'announcements.send',
+  'auditlog.view',
+];
+
+const DEFAULT_ROLE_PERMISSIONS = {
+  admin: [
+    'users.create',
+    'users.edit',
+    'users.disable',
+    'users.resetPassword',
+    'users.import',
+    'roles.manage',
+    'classes.manage',
+    'subjects.manage',
+    'teachers.assign',
+    'students.enrol',
+    'parents.link',
+    'analytics.school',
+    'announcements.send',
+    'auditlog.view',
+  ],
+  principal: [
+    'analytics.school',
+    'marks.viewAll',
+    'announcements.send',
+    'auditlog.view',
+  ],
+  coordinator: [
+    'classes.manage',
+    'subjects.manage',
+    'analytics.school',
+    'analytics.class',
+    'marks.viewAll',
+    'auditlog.view',
+  ],
+  teacher: [
+    'assignments.create',
+    'assignments.grade',
+    'attendance.mark',
+    'analytics.class',
+  ],
+  counsellor: [
+    'analytics.school',
+    'marks.viewAll',
+    'attendance.mark',
+  ],
+  student: [
+    'marks.viewOwn',
+    'ai.tutor.use',
+  ],
+  parent: [
+    'marks.viewChild',
+  ],
+};
+
+module.exports = {
+  ALL_PERMISSIONS,
+  DEFAULT_ROLE_PERMISSIONS,
+};

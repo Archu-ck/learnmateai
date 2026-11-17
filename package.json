@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "LearnMate School Admin LMS Prototype",
   "scripts": {
+    "build": "echo 'Root build'",
     "dev:server": "npm --prefix server run dev",
     "dev:client": "npm --prefix client run dev",
     "seed": "npm --prefix server run seed",

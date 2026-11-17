@@ -61,6 +61,11 @@ const userSchema = new mongoose.Schema(
       trim: true,
       default: null,
     },
+    parentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
     // Parent extras
     childIds: [
       {

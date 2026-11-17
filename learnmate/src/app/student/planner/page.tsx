@@ -1,256 +1,333 @@
 "use client";
 
-import { useState } from "react";
-import { Calendar, Clock, Sparkles, ChevronLeft, ChevronRight, BookOpen, Coffee, GraduationCap } from "lucide-react";
-import AITutorPanel from "@/components/AITutorPanel";
+import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
+import { useToast } from "@/components/Toast";
+import {
+  Calendar,
+  Clock,
+  Sparkles,
+  Plus,
+  Trash2,
+  CheckCircle2,
+  Bot,
+  Layers,
+  X,
+} from "lucide-react";
 
-type BlockType = "school" | "coaching" | "study" | "free";
-
-interface ScheduleBlock {
-  label: string;
-  type: BlockType;
+interface StudyBlockItem {
+  _id?: string;
+  day: string;
+  startTime: string;
+  endTime: string;
+  title: string;
+  subjectName: string;
+  type: "study" | "school" | "free";
+  isCompleted?: boolean;
 }
 
-const blockStyles: Record<BlockType, { bg: string; text: string; border: string }> = {
-  school: {
-    bg: "bg-blue-500/10 hover:bg-blue-500/15",
-    text: "text-blue-700",
-    border: "border-blue-200/60",
-  },
-  coaching: {
-    bg: "bg-violet-500/10 hover:bg-violet-500/15",
-    text: "text-violet-700",
-    border: "border-violet-200/60",
-  },
-  study: {
-    bg: "bg-emerald-500/10 hover:bg-emerald-500/15",
-    text: "text-emerald-700",
-    border: "border-emerald-200/60",
-  },
-  free: {
-    bg: "bg-slate-500/5 hover:bg-slate-500/10",
-    text: "text-slate-400",
-    border: "border-slate-200/40",
-  },
-};
+export default function StudentStudyPlannerPage() {
+  const { toast } = useToast();
+  const [blocks, setBlocks] = useState<StudyBlockItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  // New Block Modal
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newBlock, setNewBlock] = useState({
+    day: "Monday",
+    startTime: "17:00",
+    endTime: "18:00",
+    title: "",
+    subjectName: "Mathematics",
+    type: "study",
+  });
 
-const timeSlots = [
-  "8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM", "12:00 PM",
-  "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM",
-  "6:00 PM", "7:00 PM", "8:00 PM",
-];
+  // AI Plan Generation State
+  const [aiGenerating, setAiGenerating] = useState(false);
 
-const schedule: ScheduleBlock[][] = [
-  // 8:00 AM
-  [
-    { label: "Mathematics", type: "school" },
-    { label: "Physics", type: "school" },
-    { label: "Chemistry", type: "school" },
-    { label: "Mathematics", type: "school" },
-    { label: "English", type: "school" },
-    { label: "JEE Mathematics", type: "coaching" },
-  ],
-  // 9:00 AM
-  [
-    { label: "Physics", type: "school" },
-    { label: "Chemistry", type: "school" },
-    { label: "English", type: "school" },
-    { label: "Physics", type: "school" },
-    { label: "Mathematics", type: "school" },
-    { label: "JEE Mathematics", type: "coaching" },
-  ],
-  // 10:00 AM
-  [
-    { label: "English", type: "school" },
-    { label: "Mathematics", type: "school" },
-    { label: "Physics", type: "school" },
-    { label: "Computer Science", type: "school" },
-    { label: "Chemistry", type: "school" },
-    { label: "JEE Physics", type: "coaching" },
-  ],
-  // 11:00 AM
-  [
-    { label: "History", type: "school" },
-    { label: "English", type: "school" },
-    { label: "Computer Science", type: "school" },
-    { label: "Chemistry", type: "school" },
-    { label: "Physics", type: "school" },
-    { label: "JEE Physics", type: "coaching" },
-  ],
-  // 12:00 PM
-  [
-    { label: "Lunch & Break", type: "free" },
-    { label: "Lunch & Break", type: "free" },
-    { label: "Lunch & Break", type: "free" },
-    { label: "Lunch & Break", type: "free" },
-    { label: "Lunch & Break", type: "free" },
-    { label: "Lunch & Break", type: "free" },
-  ],
-  // 1:00 PM
-  [
-    { label: "Chemistry", type: "school" },
-    { label: "Geography", type: "school" },
-    { label: "Mathematics", type: "school" },
-    { label: "English", type: "school" },
-    { label: "History", type: "school" },
-    { label: "Self Study: Chemistry", type: "study" },
-  ],
-  // 2:00 PM
-  [
-    { label: "Computer Science", type: "school" },
-    { label: "History", type: "school" },
-    { label: "Geography", type: "school" },
-    { label: "History", type: "school" },
-    { label: "Geography", type: "school" },
-    { label: "Self Study: Physics", type: "study" },
-  ],
-  // 3:00 PM
-  [
-    { label: "Free / Sports", type: "free" },
-    { label: "Free / Sports", type: "free" },
-    { label: "Free / Sports", type: "free" },
-    { label: "Free / Sports", type: "free" },
-    { label: "Free / Sports", type: "free" },
-    { label: "Free Time", type: "free" },
-  ],
-  // 4:00 PM
-  [
-    { label: "JEE Mathematics", type: "coaching" },
-    { label: "Self Study: Math", type: "study" },
-    { label: "JEE Physics", type: "coaching" },
-    { label: "Self Study: English", type: "study" },
-    { label: "JEE Chemistry", type: "coaching" },
-    { label: "Free Time", type: "free" },
-  ],
-  // 5:00 PM
-  [
-    { label: "JEE Mathematics", type: "coaching" },
-    { label: "Self Study: Physics", type: "study" },
-    { label: "JEE Physics", type: "coaching" },
-    { label: "Self Study: Chemistry", type: "study" },
-    { label: "JEE Chemistry", type: "coaching" },
-    { label: "Free Time", type: "free" },
-  ],
-  // 6:00 PM
-  [
-    { label: "Self Study: Chem", type: "study" },
-    { label: "JEE Chemistry", type: "coaching" },
-    { label: "Self Study: Math", type: "study" },
-    { label: "JEE Mathematics", type: "coaching" },
-    { label: "Self Study: Physics", type: "study" },
-    { label: "Free Time", type: "free" },
-  ],
-  // 7:00 PM
-  [
-    { label: "Self Study: Physics", type: "study" },
-    { label: "JEE Chemistry", type: "coaching" },
-    { label: "Self Study: History", type: "study" },
-    { label: "JEE Mathematics", type: "coaching" },
-    { label: "Self Study: Math", type: "study" },
-    { label: "Free Time", type: "free" },
-  ],
-  // 8:00 PM
-  [
-    { label: "Dinner & Rest", type: "free" },
-    { label: "Dinner & Rest", type: "free" },
-    { label: "Dinner & Rest", type: "free" },
-    { label: "Dinner & Rest", type: "free" },
-    { label: "Dinner & Rest", type: "free" },
-    { label: "Dinner & Rest", type: "free" },
-  ],
-];
+  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-export default function PlannerPage() {
-  const [selectedDayIndex, setSelectedDayIndex] = useState<number | "all">("all");
+  const loadPlanner = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get<{ blocks: StudyBlockItem[] }>("/api/student/planner");
+      setBlocks(res.blocks || []);
+    } catch (err: any) {
+      toast(err.message || "Failed to load study blocks", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPlanner();
+  }, []);
+
+  // Add block
+  const handleSaveBlock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await api.post<{ block: StudyBlockItem }>(
+        "/api/student/planner/block",
+        newBlock
+      );
+      setBlocks((prev) => [...prev, res.block]);
+      toast("Study block added", "success");
+      setShowAddModal(false);
+      setNewBlock({ ...newBlock, title: "" });
+    } catch (err: any) {
+      toast(err.message || "Failed to add block", "error");
+    }
+  };
+
+  // Toggle complete
+  const handleToggleComplete = async (block: StudyBlockItem) => {
+    const newStatus = !block.isCompleted;
+    try {
+      await api.post("/api/student/planner/block", {
+        id: block._id,
+        isCompleted: newStatus,
+      });
+      setBlocks((prev) =>
+        prev.map((b) => (b._id === block._id ? { ...b, isCompleted: newStatus } : b))
+      );
+    } catch (err: any) {
+      toast(err.message || "Failed to update block", "error");
+    }
+  };
+
+  // Delete block
+  const handleDeleteBlock = async (id?: string) => {
+    if (!id) return;
+    try {
+      await api.delete(`/api/student/planner/block/${id}`);
+      setBlocks((prev) => prev.filter((b) => b._id !== id));
+      toast("Block removed", "success");
+    } catch (err: any) {
+      toast(err.message || "Failed to delete block", "error");
+    }
+  };
+
+  // AI Generate Study Plan Handler (Calls /api/ai/generate-study-plan)
+  const handleGenerateAIPlan = async () => {
+    try {
+      setAiGenerating(true);
+      const res = await api.post("/api/ai/generate-study-plan", {
+        targetExam: "Grade 8 Term Evaluations",
+        dailyHours: 2.5,
+      });
+
+      // Populate returned AI blocks into local planner & DB
+      for (const b of res.blocks || []) {
+        await api.post("/api/student/planner/block", b);
+      }
+      toast("AI study plan generated and loaded!", "success");
+      loadPlanner();
+    } catch (err: any) {
+      toast(err.message || "Failed to generate AI plan", "error");
+    } finally {
+      setAiGenerating(false);
+    }
+  };
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* Header and Filter Info */}
+    <div className="space-y-6 max-w-7xl mx-auto pb-16">
+      {/* Header */}
       <div className="neu-card p-6 sm:p-7 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="neu-pill px-3 py-1 text-xs font-bold text-indigo-700 bg-white">
-              Weekly Timetable
-            </span>
-            <span className="text-xs text-slate-400 font-medium">Nov 16 — Nov 22, 2026</span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight mt-1.5">
-            Balanced Study Planner
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-800">
+            Interactive Study Planner
           </h1>
-          <p className="text-xs text-slate-500 font-medium">
-            Synchronized with school periods, JEE coaching, and homework blocks.
+          <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
+            Organize revision blocks, track daily study routines, and balance academic workload.
           </p>
         </div>
 
-        {/* Legend Pills */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
-            School (24h)
-          </span>
-          <span className="px-3 py-1 rounded-full text-xs font-bold bg-violet-50 text-violet-700 border border-violet-200">
-            Coaching (12h)
-          </span>
-          <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            Self-Study (14h)
-          </span>
-          <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200">
-            Breaks
-          </span>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleGenerateAIPlan}
+            disabled={aiGenerating}
+            className="neu-btn px-4 py-2.5 text-indigo-600 text-xs font-bold flex items-center gap-2 hover:text-indigo-700"
+          >
+            <Bot size={15} />
+            <span>{aiGenerating ? "Generating Plan (800ms)..." : "Generate Plan with AI"}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowAddModal(true)}
+            className="neu-btn-primary flex items-center gap-1.5 px-5 py-2.5 text-xs font-bold rounded-xl"
+          >
+            <Plus size={15} />
+            <span>Add Block</span>
+          </button>
         </div>
       </div>
 
-      {/* Timetable Table Card */}
-      <div className="neu-card p-4 sm:p-6 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] border-collapse">
-            <thead>
-              <tr>
-                <th className="text-xs font-bold text-slate-400 uppercase tracking-wider text-left py-3 px-3 w-24">
-                  Time Slot
-                </th>
-                {days.map((day) => (
-                  <th
-                    key={day}
-                    className="text-xs font-extrabold text-slate-700 text-center py-3 px-2"
-                  >
-                    <span className="neu-pill px-3.5 py-1 text-xs bg-white text-slate-800 inline-block shadow-2xs">
-                      {day}
-                    </span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200/50">
-              {timeSlots.map((time, rowIdx) => (
-                <tr key={time} className="hover:bg-white/40 transition-colors">
-                  <td className="text-xs font-bold text-slate-500 py-2.5 px-3 whitespace-nowrap">
-                    {time}
-                  </td>
-                  {days.map((_, colIdx) => {
-                    const block = schedule[rowIdx]?.[colIdx];
-                    if (!block) return <td key={colIdx} />;
-                    const style = blockStyles[block.type];
+      {/* Weekly Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {days.map((day) => {
+          const dayBlocks = blocks.filter((b) => b.day === day);
+          return (
+            <div
+              key={day}
+              className="neu-card p-6 flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between pb-3.5 mb-3.5 border-b border-white/80">
+                  <h2 className="text-sm font-extrabold text-slate-800">{day}</h2>
+                  <span className="neu-pill text-[10px] font-extrabold px-2.5 py-0.5 bg-white/70 text-slate-600">
+                    {dayBlocks.length} Blocks
+                  </span>
+                </div>
 
-                    return (
-                      <td key={colIdx} className="p-1">
-                        <div
-                          className={`text-xs p-2 rounded-xl text-center font-semibold border transition-all duration-150 shadow-2xs ${style.bg} ${style.text} ${style.border}`}
-                        >
-                          {block.label}
+                <div className="space-y-3">
+                  {dayBlocks.map((b, idx) => (
+                    <div
+                      key={b._id || idx}
+                      className={`p-3.5 rounded-xl border transition-all text-xs flex items-start justify-between gap-2 ${
+                        b.isCompleted
+                          ? "neu-inset opacity-60 line-through"
+                          : "neu-card-sm"
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleComplete(b)}
+                            className={`w-4 h-4 rounded-md border flex items-center justify-center flex-shrink-0 cursor-pointer ${
+                              b.isCompleted
+                                ? "bg-emerald-600 border-emerald-600 text-white"
+                                : "border-slate-300 bg-white/80"
+                            }`}
+                          >
+                            {b.isCompleted && <CheckCircle2 size={12} />}
+                          </button>
+                          <span className="font-bold text-slate-800 truncate">
+                            {b.title || b.subjectName}
+                          </span>
                         </div>
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                        <div className="text-[11px] text-slate-500 mt-1 pl-6 font-medium">
+                          {b.startTime} - {b.endTime} • {b.subjectName}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteBlock(b._id)}
+                        className="text-slate-300 hover:text-rose-500 transition-colors p-1 cursor-pointer"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+
+                  {dayBlocks.length === 0 && (
+                    <p className="text-xs text-slate-400 italic py-6 text-center font-medium">
+                      Free time / No study blocks.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      <AITutorPanel />
+      {/* Modal: Add Block */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-xl">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-slate-900">Add Study Block</h3>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="text-slate-400 hover:text-slate-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveBlock} className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  Day of Week
+                </label>
+                <select
+                  value={newBlock.day}
+                  onChange={(e) => setNewBlock({ ...newBlock, day: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold"
+                >
+                  {days.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  Title / Goal
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Practice Factoring Equations"
+                  value={newBlock.title}
+                  onChange={(e) => setNewBlock({ ...newBlock, title: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                    Start Time
+                  </label>
+                  <input
+                    type="time"
+                    value={newBlock.startTime}
+                    onChange={(e) =>
+                      setNewBlock({ ...newBlock, startTime: e.target.value })
+                    }
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                    End Time
+                  </label>
+                  <input
+                    type="time"
+                    value={newBlock.endTime}
+                    onChange={(e) => setNewBlock({ ...newBlock, endTime: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl"
+                >
+                  Add Block
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -14,6 +14,7 @@ import {
   X,
   UserPlus,
   BookOpen,
+  Sparkles,
 } from "lucide-react";
 
 interface ClassItem {
@@ -121,28 +122,38 @@ export default function ClassesPage() {
     loadData();
   }, []);
 
-  const handleCreateOrUpdateClass = async (e: React.FormEvent) => {
+  // Save Class (Create / Update)
+  const handleSaveClass = async (e: React.FormEvent) => {
     e.preventDefault();
     const sections = classForm.sectionsStr
       .split(",")
-      .map((s) => s.trim().toUpperCase())
+      .map((s) => s.trim())
       .filter(Boolean);
+
+    if (sections.length === 0) {
+      toast("Please provide at least one section (e.g. A, B)", "error");
+      return;
+    }
 
     try {
       if (editingClass) {
-        await api.patch(`/api/admin/classes/${editingClass.id}`, {
-          name: classForm.name,
-          sections,
-          academicYear: classForm.academicYear,
-        });
-        toast(`Class ${classForm.name} updated.`);
+        const res = await api.put<{ message: string; class: ClassItem }>(
+          `/api/admin/classes/${editingClass.id}`,
+          {
+            name: classForm.name,
+            sections,
+            academicYear: classForm.academicYear,
+          }
+        );
+        toast(res.message);
       } else {
-        await api.post("/api/admin/classes", {
+        const res = await api.post<{ message: string; class: ClassItem }>("/api/admin/classes", {
           name: classForm.name,
           sections,
           academicYear: classForm.academicYear,
         });
-        toast(`Class ${classForm.name} created.`);
+        toast(res.message);
+        setSelectedClassId(res.class.id);
       }
 
       setIsAddClassOpen(false);
@@ -154,52 +165,39 @@ export default function ClassesPage() {
     }
   };
 
-  const handleDeleteClass = async (c: ClassItem) => {
-    if (!confirm(`Are you sure you want to delete ${c.name}?`)) return;
+  const handleDeleteClass = async (cls: ClassItem) => {
+    if (!confirm(`Are you sure you want to delete ${cls.name}?`)) return;
     try {
-      await api.delete(`/api/admin/classes/${c.id}`);
-      toast(`Class ${c.name} deleted.`);
+      const res = await api.delete<{ message: string }>(`/api/admin/classes/${cls.id}`);
+      toast(res.message);
+      if (selectedClassId === cls.id) setSelectedClassId(null);
       loadData();
     } catch (err: any) {
       toast(err.message || "Failed to delete class", "error");
     }
   };
 
-  const handleAssignTeacher = async (e: React.FormEvent) => {
+  // Assign Teacher Submit
+  const handleAssignSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post("/api/admin/teacher-assignments", {
-        teacherId: assignForm.teacherId,
-        classId: assignForm.classId,
-        section: assignForm.section,
-        subjectId: assignForm.subjectId || null,
-        isClassTeacher: assignForm.isClassTeacher,
-      });
-
-      toast("Teacher assignment saved successfully.");
+      const res = await api.post<{ message: string; assignment: TeacherAssignmentItem }>(
+        "/api/admin/teacher-assignments",
+        assignForm
+      );
+      toast(res.message);
       setIsAssignOpen(false);
-      setAssignForm({ teacherId: "", classId: "", section: "", subjectId: "", isClassTeacher: false });
       loadData();
     } catch (err: any) {
       toast(err.message || "Failed to assign teacher", "error");
     }
   };
 
-  const handleDeleteAssignment = async (id: string) => {
-    if (!confirm("Remove this teacher assignment?")) return;
-    try {
-      await api.delete(`/api/admin/teacher-assignments/${id}`);
-      toast("Assignment removed.");
-      loadData();
-    } catch (err: any) {
-      toast(err.message || "Failed to delete assignment", "error");
-    }
-  };
-
+  // Enrol Students Submit
   const handleEnrolSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (enrolForm.studentIds.length === 0) {
-      toast("Please select at least one student to enrol.", "error");
+      toast("Please select at least one student to enrol", "error");
       return;
     }
 
@@ -209,26 +207,26 @@ export default function ClassesPage() {
         classId: enrolForm.classId,
         sectionId: enrolForm.sectionId,
       });
-
       toast(res.message);
       setIsEnrolOpen(false);
-      setEnrolForm({ classId: "", sectionId: "", studentIds: [] });
       loadData();
     } catch (err: any) {
       toast(err.message || "Failed to enrol students", "error");
     }
   };
 
-  const activeClass = classes.find((c) => c.id === selectedClassId);
+  const activeClass = classes.find((c) => c.id === selectedClassId) || classes[0];
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Header & Actions */}
+    <div className="space-y-6 max-w-7xl mx-auto pb-10">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Classes &amp; Sections</h1>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight">
+            Classes, Sections &amp; Enrolments
+          </h1>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
-            Configure school grades, manage class teachers, attach subject instructors, and enrol students.
+            Configure academic grade rosters, assign subject teachers, designate class teachers, and enrol learners.
           </p>
         </div>
 
@@ -238,60 +236,48 @@ export default function ClassesPage() {
             setClassForm({ name: "", sectionsStr: "A, B", academicYear: "2026-2027" });
             setIsAddClassOpen(true);
           }}
-          className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center gap-2 shadow-xs transition-all cursor-pointer self-start sm:self-auto"
+          className="neu-btn-primary px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 self-start sm:self-auto cursor-pointer"
         >
-          <Plus size={15} />
+          <Plus size={16} />
           <span>Add New Class</span>
         </button>
       </div>
 
-      {/* Grid Layout: Classes List on Left, Active Class Detail & Assignments on Right */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Classes List */}
-        <div className="lg:col-span-1 space-y-3">
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
-            <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 px-1">
-              Registered Classes ({classes.length})
-            </h2>
+        {/* Left Column: Classes List */}
+        <div className="lg:col-span-1 space-y-4">
+          <div className="neu-card p-6">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200/60 mb-3">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                Academic Classes ({classes.length})
+              </span>
+            </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {classes.map((cls) => {
-                const isSelected = cls.id === selectedClassId;
+                const isSelected = cls.id === (activeClass?.id || "");
                 return (
                   <div
                     key={cls.id}
                     onClick={() => setSelectedClassId(cls.id)}
-                    className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
+                    className={`p-3.5 rounded-2xl cursor-pointer transition-all flex items-center justify-between ${
                       isSelected
-                        ? "bg-indigo-50/70 border-indigo-200 text-slate-900 shadow-xs"
-                        : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
+                        ? "bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/25"
+                        : "neu-card hover:bg-white/80 text-slate-700"
                     }`}
                   >
                     <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-slate-900">{cls.name}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">({cls.academicYear})</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 mt-1.5">
-                        {cls.sections.map((s) => (
-                          <span
-                            key={s}
-                            className="px-1.5 py-0.2 text-[10px] font-bold rounded bg-slate-100 text-slate-700 border border-slate-200"
-                          >
-                            Sec {s}
-                          </span>
-                        ))}
-                      </div>
+                      <p className={`font-extrabold text-sm ${isSelected ? "text-white" : "text-slate-800"}`}>
+                        {cls.name}
+                      </p>
+                      <p className={`text-[11px] font-medium mt-0.5 ${isSelected ? "text-indigo-100" : "text-slate-400"}`}>
+                        Sections: {cls.sections.join(", ")} • {cls.studentCount || 0} Students
+                      </p>
                     </div>
 
-                    <div className="flex items-center gap-2 text-right">
-                      <span className="text-xs font-bold text-slate-800 flex items-center gap-1">
-                        <Users size={12} className="text-indigo-600" />
-                        <span>{cls.studentCount}</span>
-                      </span>
+                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
+                        onClick={() => {
                           setEditingClass(cls);
                           setClassForm({
                             name: cls.name,
@@ -300,17 +286,18 @@ export default function ClassesPage() {
                           });
                           setIsAddClassOpen(true);
                         }}
-                        className="p-1 text-slate-400 hover:text-indigo-600 rounded"
+                        className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                          isSelected ? "hover:bg-white/20 text-white" : "neu-btn text-slate-500 hover:text-indigo-600"
+                        }`}
                         title="Edit Class"
                       >
                         <Edit2 size={13} />
                       </button>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteClass(cls);
-                        }}
-                        className="p-1 text-slate-400 hover:text-rose-600 rounded"
+                        onClick={() => handleDeleteClass(cls)}
+                        className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                          isSelected ? "hover:bg-white/20 text-white" : "neu-btn text-slate-500 hover:text-rose-600"
+                        }`}
                         title="Delete Class"
                       >
                         <Trash2 size={13} />
@@ -324,42 +311,25 @@ export default function ClassesPage() {
         </div>
 
         {/* Selected Class Deep View */}
-        <div className="lg:col-span-2 space-y-5">
+        <div className="lg:col-span-2 space-y-6">
           {activeClass ? (
             <>
-              {/* Active Class Header */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              {/* Active Class Header Card */}
+              <div className="neu-card p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="px-2 py-0.5 text-[10px] font-bold bg-indigo-50 text-indigo-700 rounded border border-indigo-100">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="px-2.5 py-0.5 text-[10px] font-bold bg-indigo-500/10 text-indigo-700 rounded-md border border-indigo-200/40">
                       Active Class Workspace
                     </span>
-                    <span className="text-xs text-slate-400">Academic Year {activeClass.academicYear}</span>
+                    <span className="text-xs text-slate-400 font-medium">Academic Year {activeClass.academicYear}</span>
                   </div>
-                  <h2 className="text-xl font-bold text-slate-900">{activeClass.name}</h2>
-                  <p className="text-xs text-slate-500 font-medium">
+                  <h2 className="text-xl sm:text-2xl font-extrabold text-slate-800">{activeClass.name}</h2>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
                     Sections: {activeClass.sections.join(", ")} • {activeClass.studentCount} Enrolled Students
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      setAssignForm({
-                        teacherId: "",
-                        classId: activeClass.id,
-                        section: activeClass.sections[0] || "A",
-                        subjectId: "",
-                        isClassTeacher: false,
-                      });
-                      setIsAssignOpen(true);
-                    }}
-                    className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs cursor-pointer"
-                  >
-                    <GraduationCap size={15} />
-                    <span>Assign Teacher</span>
-                  </button>
-
+                <div className="flex items-center gap-2.5 flex-wrap">
                   <button
                     onClick={() => {
                       setEnrolForm({
@@ -369,7 +339,7 @@ export default function ClassesPage() {
                       });
                       setIsEnrolOpen(true);
                     }}
-                    className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                    className="neu-btn-primary px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                   >
                     <UserPlus size={15} />
                     <span>Enrol Students</span>
@@ -384,163 +354,139 @@ export default function ClassesPage() {
                     (a) => a.class?.id === activeClass.id && a.section === sec
                   );
                   const classTeacher = secAssignments.find((a) => a.isClassTeacher);
-                  const subjectTeachers = secAssignments.filter((a) => !a.isClassTeacher);
 
                   return (
-                    <div key={sec} className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-4">
-                      <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                        <div className="flex items-center gap-2">
-                          <span className="w-6 h-6 rounded-md bg-slate-100 border border-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center">
+                    <div key={sec} className="neu-card p-6 space-y-4">
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-200/60">
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-200/50 text-indigo-700 font-bold text-xs flex items-center justify-center">
                             {sec}
                           </span>
-                          <h3 className="text-sm font-bold text-slate-900">
+                          <h3 className="text-sm font-extrabold text-slate-800">
                             {activeClass.name} — Section {sec}
                           </h3>
                         </div>
 
-                        {classTeacher ? (
-                          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg text-xs font-bold">
-                            <ShieldCheck size={14} className="text-amber-600" />
-                            <span>Class Teacher: {classTeacher.teacher?.name}</span>
-                          </div>
-                        ) : (
-                          <span className="text-[11px] text-slate-400 font-medium">No class teacher assigned</span>
-                        )}
                       </div>
 
-                      {/* Subject Teachers Table */}
-                      <div>
-                        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-                          Assigned Teachers &amp; Subjects ({secAssignments.length})
-                        </p>
-                        {secAssignments.length > 0 ? (
-                          <div className="border border-slate-100 rounded-lg overflow-hidden text-xs">
-                            <table className="w-full text-left">
-                              <thead className="bg-slate-50 text-slate-500 text-[11px]">
-                                <tr>
-                                  <th className="py-2 px-3">Teacher</th>
-                                  <th className="py-2 px-3">Subject</th>
-                                  <th className="py-2 px-3">Designation</th>
-                                  <th className="py-2 px-3 text-right">Action</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-100">
-                                {secAssignments.map((a) => (
-                                  <tr key={a.id} className="hover:bg-slate-50/50">
-                                    <td className="py-2 px-3 font-bold text-slate-800">
-                                      {a.teacher?.name || "Unassigned"}
-                                    </td>
-                                    <td className="py-2 px-3 text-slate-600">
-                                      {a.subject ? `${a.subject.name} (${a.subject.code})` : "General"}
-                                    </td>
-                                    <td className="py-2 px-3">
-                                      {a.isClassTeacher ? (
-                                        <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 rounded">
-                                          Class Teacher
-                                        </span>
-                                      ) : (
-                                        <span className="text-slate-400 text-[11px]">Subject Teacher</span>
-                                      )}
-                                    </td>
-                                    <td className="py-2 px-3 text-right">
-                                      <button
-                                        onClick={() => handleDeleteAssignment(a.id)}
-                                        className="text-slate-400 hover:text-rose-600 p-1 rounded"
-                                        title="Remove Assignment"
-                                      >
-                                        <Trash2 size={13} />
-                                      </button>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                      {/* Enrolled Students in this section */}
+                      {(() => {
+                        const secStudents = students.filter(
+                          (s) => s.classId === activeClass.id && s.sectionId === sec
+                        );
+                        return (
+                          <div>
+                            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                              Enrolled Students ({secStudents.length})
+                            </p>
+                            {secStudents.length > 0 ? (
+                              <div className="neu-inset p-3 overflow-x-auto text-xs">
+                                <table className="w-full text-left min-w-[420px]">
+                                  <thead className="text-slate-500 font-bold text-[11px] border-b border-slate-200/60">
+                                    <tr>
+                                      <th className="py-2 px-3">Name</th>
+                                      <th className="py-2 px-3">Admission No</th>
+                                      <th className="py-2 px-3">Email</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-100">
+                                    {secStudents.map((s) => (
+                                      <tr key={s.id} className="hover:bg-white/40">
+                                        <td className="py-2.5 px-3 font-semibold text-slate-800">{s.name}</td>
+                                        <td className="py-2.5 px-3 font-mono text-[11px] text-slate-500">
+                                          {s.admissionNo || "—"}
+                                        </td>
+                                        <td className="py-2.5 px-3 text-slate-500">{s.email}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            ) : (
+                              <div className="neu-inset p-6 text-center text-slate-400 text-xs">
+                                No students enrolled in Section {sec} yet. Click &quot;Enrol Students&quot; above to add learners.
+                              </div>
+                            )}
                           </div>
-                        ) : (
-                          <p className="text-xs text-slate-400 py-2">
-                            No faculty assigned to Section {sec} yet.
-                          </p>
-                        )}
-                      </div>
+                        );
+                      })()}
                     </div>
                   );
                 })}
               </div>
             </>
           ) : (
-            <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-400 text-xs">
-              Select or create a class to manage sections and teacher allocations.
+            <div className="neu-card p-12 text-center text-slate-400 text-sm">
+              No classes created yet. Click &quot;Add New Class&quot; to set up your academic roster.
             </div>
           )}
         </div>
       </div>
 
-      {/* Add / Edit Class Modal */}
+      {/* CREATE / EDIT CLASS MODAL */}
       {isAddClassOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h2 className="text-sm font-bold text-slate-900">
-                {editingClass ? "Edit Class Details" : "Create New Class"}
+        <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="neu-card bg-[#f0f3f8] max-w-md w-full p-6 sm:p-7 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200/60">
+              <h2 className="text-base font-extrabold text-slate-800">
+                {editingClass ? "Edit Class" : "Create New Class"}
               </h2>
               <button
                 onClick={() => setIsAddClassOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1"
+                className="neu-circle w-8 h-8 text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X size={16} />
               </button>
             </div>
 
-            <form onSubmit={handleCreateOrUpdateClass} className="space-y-4 text-xs">
+            <form onSubmit={handleSaveClass} className="space-y-4 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Class Name</label>
+                <label className="block font-bold text-slate-700 mb-1">Class Name</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Grade 8 or Grade 9"
+                  placeholder="e.g. Grade 8, Grade 10"
                   value={classForm.name}
                   onChange={(e) => setClassForm({ ...classForm, name: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white"
+                  className="neu-input w-full"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Sections (comma-separated)
-                </label>
+                <label className="block font-bold text-slate-700 mb-1">Sections (comma separated)</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. A, B, C"
+                  placeholder="A, B, C"
                   value={classForm.sectionsStr}
                   onChange={(e) => setClassForm({ ...classForm, sectionsStr: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white"
+                  className="neu-input w-full"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Academic Year</label>
+                <label className="block font-bold text-slate-700 mb-1">Academic Year</label>
                 <input
                   type="text"
                   required
                   placeholder="2026-2027"
                   value={classForm.academicYear}
                   onChange={(e) => setClassForm({ ...classForm, academicYear: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white"
+                  className="neu-input w-full"
                 />
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              <div className="pt-3 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setIsAddClassOpen(false)}
-                  className="px-3 py-1.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 font-semibold"
+                  className="neu-btn px-4 py-2 rounded-xl text-slate-600 font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow-xs"
+                  className="neu-btn-primary px-5 py-2 rounded-xl font-bold cursor-pointer"
                 >
                   Save Class
                 </button>
@@ -550,174 +496,48 @@ export default function ClassesPage() {
         </div>
       )}
 
-      {/* Assign Teacher Modal */}
-      {isAssignOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h2 className="text-sm font-bold text-slate-900">Assign Teacher Allocation</h2>
-              <button
-                onClick={() => setIsAssignOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1"
-              >
-                <X size={16} />
-              </button>
-            </div>
 
-            <form onSubmit={handleAssignTeacher} className="space-y-4 text-xs">
+
+      {/* ENROL STUDENTS MODAL */}
+      {isEnrolOpen && activeClass && (
+        <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="neu-card bg-[#f0f3f8] max-w-lg w-full p-6 sm:p-7 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200/60">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Select Faculty Teacher</label>
-                <select
-                  required
-                  value={assignForm.teacherId}
-                  onChange={(e) => setAssignForm({ ...assignForm, teacherId: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="">Select Teacher</option>
-                  {teachers.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} ({t.email})
-                    </option>
-                  ))}
-                </select>
+                <h2 className="text-base font-extrabold text-slate-800">Enrol Students</h2>
+                <p className="text-xs text-slate-400 font-medium">To {activeClass.name}</p>
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Class</label>
-                  <select
-                    value={assignForm.classId}
-                    onChange={(e) => setAssignForm({ ...assignForm, classId: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900"
-                  >
-                    {classes.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Section</label>
-                  <select
-                    value={assignForm.section}
-                    onChange={(e) => setAssignForm({ ...assignForm, section: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900"
-                  >
-                    {classes
-                      .find((c) => c.id === assignForm.classId)
-                      ?.sections.map((s) => (
-                        <option key={s} value={s}>
-                          Section {s}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Subject (Course)</label>
-                <select
-                  value={assignForm.subjectId}
-                  onChange={(e) => setAssignForm({ ...assignForm, subjectId: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900"
-                >
-                  <option value="">None / General</option>
-                  {subjects.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-xl flex items-center gap-2.5">
-                <input
-                  type="checkbox"
-                  id="classTeacherCheck"
-                  checked={assignForm.isClassTeacher}
-                  onChange={(e) => setAssignForm({ ...assignForm, isClassTeacher: e.target.checked })}
-                  className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
-                />
-                <label htmlFor="classTeacherCheck" className="text-xs font-bold text-amber-900 cursor-pointer">
-                  Designate as Section Class Teacher
-                </label>
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAssignOpen(false)}
-                  className="px-3 py-1.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow-xs"
-                >
-                  Save Assignment
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Enrol Students Modal */}
-      {isEnrolOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h2 className="text-sm font-bold text-slate-900">Bulk Enrol Students into Section</h2>
               <button
                 onClick={() => setIsEnrolOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1"
+                className="neu-circle w-8 h-8 text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X size={16} />
               </button>
             </div>
 
             <form onSubmit={handleEnrolSubmit} className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Target Class</label>
-                  <select
-                    value={enrolForm.classId}
-                    onChange={(e) => setEnrolForm({ ...enrolForm, classId: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900"
-                  >
-                    {classes.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Target Section</label>
-                  <select
-                    value={enrolForm.sectionId}
-                    onChange={(e) => setEnrolForm({ ...enrolForm, sectionId: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900"
-                  >
-                    {classes
-                      .find((c) => c.id === enrolForm.classId)
-                      ?.sections.map((s) => (
-                        <option key={s} value={s}>
-                          Section {s}
-                        </option>
-                      ))}
-                  </select>
-                </div>
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Target Section</label>
+                <select
+                  value={enrolForm.sectionId}
+                  onChange={(e) => setEnrolForm({ ...enrolForm, sectionId: e.target.value })}
+                  className="neu-input w-full cursor-pointer"
+                >
+                  {activeClass.sections.map((sec) => (
+                    <option key={sec} value={sec}>
+                      Section {sec}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Select Students to Enrol ({enrolForm.studentIds.length} selected)
+                <label className="block font-bold text-slate-700 mb-1">
+                  Select Students ({enrolForm.studentIds.length} selected)
                 </label>
+                <p className="text-[10px] text-slate-400 mb-1.5">
+                  Hold Ctrl / Cmd to select multiple students to move or enrol into this section.
+                </p>
                 <select
                   multiple
                   value={enrolForm.studentIds}
@@ -725,30 +545,29 @@ export default function ClassesPage() {
                     const selected = Array.from(e.target.selectedOptions, (option) => option.value);
                     setEnrolForm({ ...enrolForm, studentIds: selected });
                   }}
-                  className="w-full h-36 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900"
+                  className="neu-input w-full h-44 cursor-pointer"
                 >
                   {students.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.name} ({s.email}) {s.sectionId ? `[Currently in Sec ${s.sectionId}]` : "[Unassigned]"}
+                      {s.name} ({s.admissionNo || "No Adm"} - {s.email})
                     </option>
                   ))}
                 </select>
-                <p className="text-[10px] text-slate-400 mt-1">Hold Ctrl / Cmd to choose multiple students</p>
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              <div className="pt-3 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setIsEnrolOpen(false)}
-                  className="px-3 py-1.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 font-semibold"
+                  className="neu-btn px-4 py-2 rounded-xl text-slate-600 font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow-xs"
+                  className="neu-btn-primary px-5 py-2 rounded-xl font-bold cursor-pointer"
                 >
-                  Enrol Selected Students
+                  Complete Enrolment
                 </button>
               </div>
             </form>

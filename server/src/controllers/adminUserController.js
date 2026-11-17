@@ -19,6 +19,9 @@ const createUserSchema = z.object({
   classId: z.string().optional().nullable(),
   sectionId: z.string().optional().nullable(),
   childIds: z.array(z.string()).optional(),
+  parentId: z.string().optional().nullable(),
+  parentName: z.string().optional().nullable(),
+  parentEmail: z.string().optional().nullable(),
 });
 
 const updateUserSchema = z.object({
@@ -30,6 +33,9 @@ const updateUserSchema = z.object({
   classId: z.string().optional().nullable(),
   sectionId: z.string().optional().nullable(),
   childIds: z.array(z.string()).optional(),
+  parentId: z.string().optional().nullable(),
+  parentName: z.string().optional().nullable(),
+  parentEmail: z.string().optional().nullable(),
 });
 
 async function createUser(req, res) {
@@ -51,6 +57,36 @@ async function createUser(req, res) {
     const temporaryPassword = generateTempPassword(10);
     const passwordHash = await bcrypt.hash(temporaryPassword, 10);
 
+    // If adding a student, handle parent connection or creation
+    let parentDoc = null;
+    if (data.role === 'student') {
+      if (data.parentId) {
+        parentDoc = await User.findOne({ _id: data.parentId, schoolId, role: 'parent' });
+      } else if (data.parentEmail && data.parentEmail.trim()) {
+        const cleanParentEmail = data.parentEmail.toLowerCase().trim();
+        parentDoc = await User.findOne({ email: cleanParentEmail, schoolId });
+        if (!parentDoc) {
+          const parentTempPass = generateTempPassword(10);
+          const parentPassHash = await bcrypt.hash(parentTempPass, 10);
+          parentDoc = await User.create({
+            name: (data.parentName && data.parentName.trim()) || `Parent of ${data.name.trim()}`,
+            email: cleanParentEmail,
+            passwordHash: parentPassHash,
+            role: 'parent',
+            status: 'active',
+            mustChangePassword: true,
+            schoolId,
+            childIds: [],
+          });
+          await sendTemporaryPasswordEmail({
+            to: cleanParentEmail,
+            name: parentDoc.name,
+            temporaryPassword: parentTempPass,
+          });
+        }
+      }
+    }
+
     const newUser = await User.create({
       name: data.name.trim(),
       email: cleanEmail,
@@ -62,8 +98,16 @@ async function createUser(req, res) {
       admissionNo: data.admissionNo,
       classId: data.classId || null,
       sectionId: data.sectionId || null,
+      parentId: parentDoc ? parentDoc._id : (data.parentId || null),
       childIds: data.childIds || [],
     });
+
+    if (parentDoc) {
+      if (!parentDoc.childIds.some((cid) => cid.toString() === newUser._id.toString())) {
+        parentDoc.childIds.push(newUser._id);
+        await parentDoc.save();
+      }
+    }
 
     // Attempt to send email (won't crash if fails)
     await sendTemporaryPasswordEmail({
@@ -141,6 +185,7 @@ async function getUsers(req, res) {
       User.find(query)
         .populate('classId', 'name sections')
         .populate('childIds', 'name email role')
+        .populate('parentId', 'name email role')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limitNum)
@@ -159,6 +204,9 @@ async function getUsers(req, res) {
       classId: u.classId?._id || u.classId,
       className: u.classId?.name || null,
       sectionId: u.sectionId,
+      parentId: u.parentId?._id || u.parentId || null,
+      parentName: u.parentId?.name || null,
+      parentEmail: u.parentId?.email || null,
       childIds: u.childIds || [],
       createdAt: u.createdAt,
       lastLoginAt: u.lastLoginAt,
@@ -248,6 +296,49 @@ async function updateUser(req, res) {
     if (updates.classId !== undefined) user.classId = updates.classId;
     if (updates.sectionId !== undefined) user.sectionId = updates.sectionId;
     if (updates.childIds !== undefined) user.childIds = updates.childIds;
+
+    if (user.role === 'student') {
+      if (updates.parentId !== undefined) {
+        if (user.parentId && user.parentId.toString() !== updates.parentId?.toString()) {
+          await User.findByIdAndUpdate(user.parentId, { $pull: { childIds: user._id } });
+        }
+        user.parentId = updates.parentId || null;
+        if (updates.parentId) {
+          await User.findByIdAndUpdate(updates.parentId, { $addToSet: { childIds: user._id } });
+        }
+      } else if (updates.parentEmail && updates.parentEmail.trim()) {
+        const cleanParentEmail = updates.parentEmail.toLowerCase().trim();
+        let parentDoc = await User.findOne({ email: cleanParentEmail, schoolId: req.user.schoolId });
+        if (!parentDoc) {
+          const parentTempPass = generateTempPassword(10);
+          const parentPassHash = await bcrypt.hash(parentTempPass, 10);
+          parentDoc = await User.create({
+            name: (updates.parentName && updates.parentName.trim()) || `Parent of ${user.name}`,
+            email: cleanParentEmail,
+            passwordHash: parentPassHash,
+            role: 'parent',
+            status: 'active',
+            mustChangePassword: true,
+            schoolId: req.user.schoolId,
+            childIds: [user._id],
+          });
+          await sendTemporaryPasswordEmail({
+            to: cleanParentEmail,
+            name: parentDoc.name,
+            temporaryPassword: parentTempPass,
+          });
+        } else {
+          if (!parentDoc.childIds.some((cid) => cid.toString() === user._id.toString())) {
+            parentDoc.childIds.push(user._id);
+            await parentDoc.save();
+          }
+        }
+        if (user.parentId && user.parentId.toString() !== parentDoc._id.toString()) {
+          await User.findByIdAndUpdate(user.parentId, { $pull: { childIds: user._id } });
+        }
+        user.parentId = parentDoc._id;
+      }
+    }
 
     await user.save();
 

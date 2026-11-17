@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
-import { ShieldCheck, Lock, Save, RotateCcw, AlertTriangle } from "lucide-react";
+import { Lock, Save, RotateCcw, AlertTriangle } from "lucide-react";
 
 interface RoleData {
   role: string;
@@ -82,23 +82,23 @@ export default function RolesMatrixPage() {
     return role === "admin" && (perm === "roles.manage" || perm === "users.create");
   };
 
-  const roleNames = ["admin", "principal", "coordinator", "teacher", "counsellor", "student", "parent"];
+  const roleNames = ["admin", "principal", "teacher", "student", "parent"];
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto pb-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Role Permissions Matrix</h1>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight">Role Permissions Matrix</h1>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
             Configure granular capability keys across all system roles. Changes apply instantly to backend authorization.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={loadRoles}
             disabled={saving}
-            className="px-3.5 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-xs"
+            className="neu-btn px-4 py-2 rounded-xl text-xs font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer"
           >
             <RotateCcw size={14} />
             <span>Reset</span>
@@ -107,7 +107,7 @@ export default function RolesMatrixPage() {
           <button
             onClick={handleSaveAll}
             disabled={saving}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center gap-2 shadow-xs cursor-pointer transition-all disabled:opacity-50"
+            className="neu-btn-primary px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer disabled:opacity-50"
           >
             <Save size={15} />
             <span>{saving ? "Saving Changes..." : "Save Permissions"}</span>
@@ -115,20 +115,22 @@ export default function RolesMatrixPage() {
         </div>
       </div>
 
-      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2.5 text-xs text-amber-800">
-        <AlertTriangle size={16} className="text-amber-600 shrink-0" />
+      <div className="neu-card p-4 flex items-center gap-3 text-xs text-amber-800">
+        <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-600 shrink-0">
+          <AlertTriangle size={18} />
+        </div>
         <span>
-          <strong>Lockout Protection Active:</strong> For safety, <code>roles.manage</code> and <code>users.create</code> are permanently locked on the <strong>admin</strong> role to ensure administrators can never lock themselves out.
+          <strong>Lockout Protection Active:</strong> For safety, <code className="font-mono bg-white/70 px-1 py-0.5 rounded">roles.manage</code> and <code className="font-mono bg-white/70 px-1 py-0.5 rounded">users.create</code> are permanently locked on the <strong>admin</strong> role to ensure administrators can never lock themselves out.
         </span>
       </div>
 
       {/* Permissions Matrix Table */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+      <div className="neu-card p-6 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left text-xs border-collapse min-w-[580px]">
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-700 text-[11px] uppercase tracking-wider">
-                <th className="py-3 px-4 font-bold sticky left-0 bg-slate-50 z-10 w-72">
+              <tr className="border-b border-slate-200/70 text-slate-500 text-[11px] uppercase tracking-wider">
+                <th className="py-3 px-4 font-bold sticky left-0 bg-[#f0f3f8] z-10 w-52 sm:w-72 border-r border-slate-200/60">
                   Permission Key
                 </th>
                 {roleNames.map((role) => (
@@ -142,13 +144,14 @@ export default function RolesMatrixPage() {
               {loading ? (
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-slate-400">
-                    Loading permissions matrix...
+                    <div className="w-8 h-8 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                    <span>Loading permissions matrix...</span>
                   </td>
                 </tr>
               ) : (
                 allPermissions.map((perm) => (
-                  <tr key={perm} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="py-2.5 px-4 font-mono font-medium text-slate-800 text-[11px] sticky left-0 bg-white">
+                  <tr key={perm} className="hover:bg-white/50 transition-colors">
+                    <td className="py-3 px-4 font-mono font-semibold text-slate-800 text-[11px] sticky left-0 bg-[#f0f3f8] border-r border-slate-200/60 truncate max-w-[160px] sm:max-w-none">
                       {perm}
                     </td>
 
@@ -157,12 +160,12 @@ export default function RolesMatrixPage() {
                       const locked = isLocked(role, perm);
 
                       return (
-                        <td key={role} className="py-2.5 px-3 text-center">
+                        <td key={role} className="py-3 px-3 text-center">
                           <div className="flex items-center justify-center">
                             {locked ? (
                               <div
                                 title="Locked by system lockout prevention"
-                                className="w-5 h-5 rounded bg-indigo-100 border border-indigo-300 flex items-center justify-center text-indigo-700 cursor-not-allowed"
+                                className="w-6 h-6 rounded-lg bg-indigo-500/10 border border-indigo-300 flex items-center justify-center text-indigo-700 cursor-not-allowed shadow-xs"
                               >
                                 <Lock size={12} />
                               </div>

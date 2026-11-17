@@ -5,12 +5,12 @@ import { CheckCircle2, AlertCircle, X } from "lucide-react";
 
 interface Toast {
   id: string;
-  type: "success" | "error";
+  type: "success" | "error" | "info";
   message: string;
 }
 
 interface ToastContextType {
-  toast: (message: string, type?: "success" | "error") => void;
+  toast: (message: string, type?: "success" | "error" | "info") => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
@@ -18,7 +18,7 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const toast = (message: string, type: "success" | "error" = "success") => {
+  const toast = (message: string, type: "success" | "error" | "info" = "success") => {
     const id = Math.random().toString(36).substring(2, 9);
     setToasts((prev) => [...prev, { id, type, message }]);
 
@@ -41,11 +41,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             className={`pointer-events-auto p-3.5 rounded-xl border shadow-lg flex items-start gap-3 transition-all animate-in slide-in-from-bottom-2 ${
               t.type === "success"
                 ? "bg-white border-emerald-200 text-slate-800"
+                : t.type === "info"
+                ? "bg-white border-indigo-200 text-slate-800"
                 : "bg-white border-rose-200 text-slate-800"
             }`}
           >
             {t.type === "success" ? (
               <CheckCircle2 size={18} className="text-emerald-600 shrink-0 mt-0.5" />
+            ) : t.type === "info" ? (
+              <AlertCircle size={18} className="text-indigo-600 shrink-0 mt-0.5" />
             ) : (
               <AlertCircle size={18} className="text-rose-600 shrink-0 mt-0.5" />
             )}
@@ -66,7 +70,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 export function useToast() {
   const ctx = useContext(ToastContext);
   if (!ctx) {
-    throw new Error("useToast must be used within ToastProvider");
+    return {
+      toast: (message: string, type?: "success" | "error" | "info") => {
+        console.log(`[Toast ${type || "info"}]: ${message}`);
+      },
+    };
   }
   return ctx;
 }

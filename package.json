@@ -1,0 +1,12 @@
+{
+  "name": "learnmate-root",
+  "version": "1.0.0",
+  "description": "LearnMate School Admin LMS Prototype",
+  "scripts": {
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "seed": "npm --prefix server run seed",
+    "test": "npm --prefix server test",
+    "build:client": "npm --prefix client run build"
+  }
+}

@@ -8,7 +8,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "principal" | "coordinator" | "teacher" | "counsellor" | "student" | "parent";
+  role: "admin" | "principal" | "teacher" | "student" | "parent" | string;
   status: "active" | "disabled";
   mustChangePassword?: boolean;
   schoolId: string;
@@ -43,10 +43,6 @@ export function getRolePath(role: string): string {
       return "/parent";
     case "principal":
       return "/principal";
-    case "coordinator":
-      return "/coordinator";
-    case "counsellor":
-      return "/counsellor";
     default:
       return "/login";
   }

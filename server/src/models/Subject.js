@@ -20,6 +20,10 @@ const subjectSchema = new mongoose.Schema(
         ref: 'Class',
       },
     ],
+    isElective: {
+      type: Boolean,
+      default: false,
+    },
     schoolId: {
       type: String,
       required: true,

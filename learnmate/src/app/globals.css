@@ -2,14 +2,14 @@
 
 @theme inline {
   --font-sans: "Plus Jakarta Sans", "Poppins", "Inter", ui-sans-serif, system-ui, sans-serif;
-  --color-background: #f0f3f8;
+  --color-background: #edf2f7;
   --color-foreground: #1e293b;
 }
 
 :root {
-  --neu-bg: #f0f3f8;
-  --neu-surface: #f4f7fc;
-  --neu-shadow-dark: #d1d9e6;
+  --neu-bg: #edf2f7;
+  --neu-surface: #f0f4f9;
+  --neu-shadow-dark: rgba(163, 177, 198, 0.55);
   --neu-shadow-light: #ffffff;
   --neu-accent-indigo: #6366f1;
   --neu-accent-coral: #fb7185;
@@ -17,8 +17,7 @@
 }
 
 body {
-  background: linear-gradient(145deg, #edf2f7 0%, #f5f7fb 50%, #ebf0f7 100%);
-  background-attachment: fixed;
+  background-color: #edf2f7;
   color: var(--color-foreground);
   font-family: var(--font-sans);
   min-height: 100vh;
@@ -46,81 +45,72 @@ body {
   background: #94a3b8;
 }
 
-/* ====== Neumorphic & Modern Aesthetic Utilities ====== */
+/* ====== Rich Neumorphism Design System Utilities ====== */
 
 /* Raised / Extruded Neumorphic Card */
 .neu-card {
-  background: #f0f3f8;
+  background: #edf2f7;
   border-radius: 24px;
-  box-shadow: 8px 8px 20px #d1d9e6, -8px -8px 20px #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 8px 8px 18px rgba(163, 177, 198, 0.55), -8px -8px 18px #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.85);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .neu-card-hover:hover {
   transform: translateY(-2px);
-  box-shadow: 10px 10px 24px #cbd5e1, -10px -10px 24px #ffffff;
+  box-shadow: 10px 10px 22px rgba(163, 177, 198, 0.65), -10px -10px 22px #ffffff;
 }
 
 /* Smaller Raised Card */
 .neu-card-sm {
-  background: #f0f3f8;
+  background: #edf2f7;
   border-radius: 18px;
-  box-shadow: 6px 6px 14px #d1d9e6, -6px -6px 14px #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 5px 5px 12px rgba(163, 177, 198, 0.5), -5px -5px 12px #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.85);
   transition: all 0.2s ease;
-}
-
-/* Frosted Flat Card (Educame-inspired clean card with ultra-subtle shadow) */
-.neu-card-flat {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  border-radius: 22px;
-  box-shadow: 0 4px 20px rgba(166, 180, 200, 0.12), 0 1px 3px rgba(0, 0, 0, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.9);
 }
 
 /* Inset / Sunken Element (inputs, search, toggles, wells) */
 .neu-inset {
-  background: #ebf0f6;
+  background: #e6ecf4;
   border-radius: 16px;
-  box-shadow: inset 4px 4px 8px #d1d9e6, inset -4px -4px 8px #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: inset 4px 4px 8px rgba(163, 177, 198, 0.6), inset -4px -4px 8px #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.6);
 }
 
 .neu-card-inset {
-  background: #ebf0f6;
+  background: #e6ecf4;
   border-radius: 20px;
-  box-shadow: inset 5px 5px 10px #d1d9e6, inset -5px -5px 10px #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: inset 5px 5px 11px rgba(163, 177, 198, 0.65), inset -5px -5px 11px #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.65);
 }
 
 /* Neumorphic Interactive Button */
 .neu-btn {
-  background: #f0f3f8;
+  background: #edf2f7;
   border-radius: 14px;
-  box-shadow: 4px 4px 10px #d1d9e6, -4px -4px 10px #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 5px 5px 12px rgba(163, 177, 198, 0.5), -5px -5px 12px #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.85);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
 }
 
 .neu-btn:hover {
-  box-shadow: 2px 2px 6px #d1d9e6, -2px -2px 6px #ffffff;
+  box-shadow: 2px 2px 6px rgba(163, 177, 198, 0.5), -2px -2px 6px #ffffff;
   transform: translateY(-1px);
 }
 
 .neu-btn:active {
-  box-shadow: inset 3px 3px 6px #d1d9e6, inset -3px -3px 6px #ffffff;
+  box-shadow: inset 3px 3px 6px rgba(163, 177, 198, 0.6), inset -3px -3px 6px #ffffff;
   transform: translateY(0);
 }
 
 /* Circular Neumorphic Button / Badge */
 .neu-circle {
   border-radius: 9999px;
-  background: #f0f3f8;
-  box-shadow: 4px 4px 9px #d1d9e6, -4px -4px 9px #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: #edf2f7;
+  box-shadow: 5px 5px 11px rgba(163, 177, 198, 0.5), -5px -5px 11px #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.85);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -128,12 +118,12 @@ body {
 }
 
 .neu-circle:hover {
-  box-shadow: 2px 2px 5px #d1d9e6, -2px -2px 5px #ffffff;
+  box-shadow: 2px 2px 6px rgba(163, 177, 198, 0.5), -2px -2px 6px #ffffff;
   transform: translateY(-1px);
 }
 
 .neu-circle:active {
-  box-shadow: inset 3px 3px 6px #d1d9e6, inset -3px -3px 6px #ffffff;
+  box-shadow: inset 3px 3px 6px rgba(163, 177, 198, 0.6), inset -3px -3px 6px #ffffff;
   transform: translateY(0);
 }
 
@@ -142,15 +132,15 @@ body {
   background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   color: white;
   border-radius: 14px;
-  box-shadow: 5px 5px 15px rgba(99, 102, 241, 0.35), -3px -3px 8px #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 5px 5px 15px rgba(99, 102, 241, 0.4), -3px -3px 8px #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
 }
 
 .neu-btn-primary:hover {
   background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  box-shadow: 6px 6px 18px rgba(99, 102, 241, 0.45), -3px -3px 8px #ffffff;
+  box-shadow: 6px 6px 18px rgba(99, 102, 241, 0.5), -3px -3px 8px #ffffff;
   transform: translateY(-1px);
 }
 
@@ -159,33 +149,26 @@ body {
   transform: translateY(0);
 }
 
-/* Coral / Rose Gradient Button (like Educame) */
-.neu-btn-coral {
-  background: linear-gradient(135deg, #fb7185 0%, #f43f5e 100%);
-  color: white;
-  border-radius: 14px;
-  box-shadow: 5px 5px 15px rgba(244, 63, 94, 0.35), -3px -3px 8px #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
-}
-
-.neu-btn-coral:hover {
-  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
-  box-shadow: 6px 6px 18px rgba(244, 63, 94, 0.45), -3px -3px 8px #ffffff;
-  transform: translateY(-1px);
-}
-
 /* Inset Neumorphic Input Field */
 .neu-input {
-  background: #ebf0f6;
+  background: #e6ecf4;
   border-radius: 14px;
-  box-shadow: inset 3px 3px 6px #d1d9e6, inset -3px -3px 6px #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: inset 3px 3px 7px rgba(163, 177, 198, 0.6), inset -3px -3px 7px #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.65);
   padding: 10px 16px;
   font-size: 14px;
   color: #1e293b;
   transition: all 0.2s ease;
+}
+
+.neu-input[class*="pl-10"],
+.neu-input[class*="pl-11"],
+.neu-input[class*="pl-12"],
+input.neu-input[class*="pl-10"],
+input.neu-input[class*="pl-11"],
+input.neu-input[class*="pl-12"],
+.neu-input-with-icon {
+  padding-left: 42px !important;
 }
 
 .neu-input::placeholder {
@@ -194,68 +177,18 @@ body {
 
 .neu-input:focus {
   outline: none;
-  box-shadow: inset 3px 3px 6px #d1d9e6, inset -3px -3px 6px #ffffff, 0 0 0 2px #818cf8;
-}
-
-/* Inset Progress Bar */
-.neu-progress {
-  background: #ebf0f6;
-  border-radius: 9999px;
-  box-shadow: inset 2px 2px 4px #d1d9e6, inset -2px -2px 4px #ffffff;
-  overflow: hidden;
-}
-
-.neu-progress-bar {
-  border-radius: 9999px;
-  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: inset 3px 3px 7px rgba(163, 177, 198, 0.6), inset -3px -3px 7px #ffffff, 0 0 0 2px #818cf8;
 }
 
 /* Soft Pill Badge */
 .neu-pill {
   border-radius: 9999px;
-  box-shadow: 3px 3px 8px #d1d9e6, -3px -3px 8px #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 3px 3px 8px rgba(163, 177, 198, 0.45), -3px -3px 8px #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.85);
 }
 
 .neu-pill-inset {
   border-radius: 9999px;
-  box-shadow: inset 2px 2px 4px #d1d9e6, inset -2px -2px 4px #ffffff;
-}
-
-/* Subtle Gradient Backgrounds for Cards */
-.subtle-gradient-indigo {
-  background: linear-gradient(135deg, rgba(238, 242, 255, 0.8) 0%, rgba(245, 243, 255, 0.7) 100%);
-}
-
-.subtle-gradient-coral {
-  background: linear-gradient(135deg, rgba(255, 241, 242, 0.8) 0%, rgba(254, 242, 242, 0.7) 100%);
-}
-
-.subtle-gradient-emerald {
-  background: linear-gradient(135deg, rgba(236, 253, 245, 0.8) 0%, rgba(240, 253, 244, 0.7) 100%);
-}
-
-.subtle-gradient-amber {
-  background: linear-gradient(135deg, rgba(255, 251, 235, 0.8) 0%, rgba(254, 243, 199, 0.7) 100%);
-}
-
-.subtle-gradient-sky {
-  background: linear-gradient(135deg, rgba(240, 249, 255, 0.8) 0%, rgba(224, 242, 254, 0.7) 100%);
-}
-
-.subtle-gradient-purple {
-  background: linear-gradient(135deg, rgba(250, 245, 255, 0.8) 0%, rgba(243, 232, 255, 0.7) 100%);
-}
-
-/* Gradient text accents */
-.gradient-text-indigo {
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.gradient-text-coral {
-  background: linear-gradient(135deg, #f43f5e, #fb7185);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  box-shadow: inset 2px 2px 5px rgba(163, 177, 198, 0.55), inset -2px -2px 5px #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.5);
 }

@@ -4,11 +4,11 @@ import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 import { useAuth } from "@/context/AuthContext";
+import StatusChip from "@/components/StatusChip";
 import {
   Search,
   UserPlus,
   Filter,
-  MoreVertical,
   KeyRound,
   UserX,
   UserCheck,
@@ -31,6 +31,9 @@ interface UserItem {
   classId?: string;
   className?: string;
   sectionId?: string;
+  parentId?: string;
+  parentName?: string;
+  parentEmail?: string;
   childIds?: any[];
   createdAt: string;
 }
@@ -60,6 +63,8 @@ export default function UsersDirectoryPage() {
   const [classes, setClasses] = useState<ClassOption[]>([]);
   // Students list for parent form
   const [allStudents, setAllStudents] = useState<Array<{ id: string; name: string; email: string }>>([]);
+  // Parents list for student form
+  const [allParents, setAllParents] = useState<Array<{ id: string; name: string; email: string }>>([]);
 
   // Modals
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -91,6 +96,9 @@ export default function UsersDirectoryPage() {
     admissionNo: "",
     classId: "",
     sectionId: "",
+    parentId: "",
+    parentName: "",
+    parentEmail: "",
     childIds: [] as string[],
   });
 
@@ -103,6 +111,9 @@ export default function UsersDirectoryPage() {
     admissionNo: "",
     classId: "",
     sectionId: "",
+    parentId: "",
+    parentName: "",
+    parentEmail: "",
     childIds: [] as string[],
   });
 
@@ -118,13 +129,16 @@ export default function UsersDirectoryPage() {
       });
       const res = await api.get<{
         users: UserItem[];
-        total: number;
-        page: number;
-        totalPages: number;
+        total?: number;
+        page?: number;
+        totalPages?: number;
+        pagination?: { total: number; page: number; totalPages: number };
       }>(`/api/admin/users?${query.toString()}`);
-      setUsers(res.users);
-      setTotal(res.total);
-      setTotalPages(res.totalPages);
+      setUsers(res.users || []);
+      const totalCount = res.total ?? res.pagination?.total ?? res.users?.length ?? 0;
+      const totalPagesCount = res.totalPages ?? res.pagination?.totalPages ?? 1;
+      setTotal(totalCount);
+      setTotalPages(totalPagesCount);
     } catch (err: any) {
       toast(err.message || "Failed to load users", "error");
     } finally {
@@ -132,13 +146,33 @@ export default function UsersDirectoryPage() {
     }
   };
 
-  const fetchClassOptions = async () => {
+  const loadReferenceData = async () => {
     try {
-      const res = await api.get<{ classes: any[] }>("/api/admin/classes");
-      setClasses(res.classes || []);
-      const stuRes = await api.get<{ users: any[] }>("/api/admin/users?role=student&limit=100");
-      setAllStudents(stuRes.users || []);
-    } catch (e) {}
+      const classRes = await api.get<{ classes: Array<{ id: string; name: string; sections: string[] }> }>(
+        "/api/admin/classes"
+      );
+      setClasses(classRes.classes || []);
+
+      const studentRes = await api.get<{ users: UserItem[] }>("/api/admin/users?role=student&limit=100");
+      setAllStudents(
+        studentRes.users.map((s) => ({
+          id: s.id,
+          name: s.name,
+          email: s.email,
+        }))
+      );
+
+      const parentRes = await api.get<{ users: UserItem[] }>("/api/admin/users?role=parent&limit=100");
+      setAllParents(
+        parentRes.users.map((p) => ({
+          id: p.id,
+          name: p.name,
+          email: p.email,
+        }))
+      );
+    } catch (err) {
+      console.error("Failed to load reference data", err);
+    }
   };
 
   useEffect(() => {
@@ -146,7 +180,7 @@ export default function UsersDirectoryPage() {
   }, [page, roleFilter, statusFilter]);
 
   useEffect(() => {
-    fetchClassOptions();
+    loadReferenceData();
   }, []);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -155,7 +189,7 @@ export default function UsersDirectoryPage() {
     fetchUsers();
   };
 
-  // Create User Submit
+  // Add User Submit
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -168,18 +202,22 @@ export default function UsersDirectoryPage() {
 
       if (addForm.role === "student") {
         payload.admissionNo = addForm.admissionNo;
-        payload.classId = addForm.classId || null;
-        payload.sectionId = addForm.sectionId || null;
+        payload.classId = addForm.classId || undefined;
+        payload.sectionId = addForm.sectionId || undefined;
+        if (addForm.parentId) payload.parentId = addForm.parentId;
+        if (addForm.parentName) payload.parentName = addForm.parentName;
+        if (addForm.parentEmail) payload.parentEmail = addForm.parentEmail;
       } else if (addForm.role === "parent") {
         payload.childIds = addForm.childIds;
       }
 
-      const res = await api.post<{ user: UserItem; temporaryPassword: string }>(
-        "/api/admin/users",
-        payload
-      );
+      const res = await api.post<{
+        message: string;
+        user: UserItem;
+        temporaryPassword?: string;
+      }>("/api/admin/users", payload);
 
-      toast(`User ${res.user.name} created successfully.`);
+      toast(res.message);
       setIsAddOpen(false);
       setAddForm({
         name: "",
@@ -189,36 +227,43 @@ export default function UsersDirectoryPage() {
         admissionNo: "",
         classId: "",
         sectionId: "",
+        parentId: "",
+        parentName: "",
+        parentEmail: "",
         childIds: [],
       });
-
-      // Show temporary password modal
-      setTempPassModal({
-        isOpen: true,
-        name: res.user.name,
-        email: res.user.email,
-        tempPass: res.temporaryPassword,
-        isReset: false,
-      });
-
       fetchUsers();
+      loadReferenceData();
+
+      if (res.temporaryPassword) {
+        setTempPassModal({
+          isOpen: true,
+          name: res.user.name,
+          email: res.user.email,
+          tempPass: res.temporaryPassword,
+          isReset: false,
+        });
+      }
     } catch (err: any) {
       toast(err.message || "Failed to create user", "error");
     }
   };
 
-  // Open Edit Modal
-  const openEdit = (u: UserItem) => {
-    setEditingUser(u);
+  // Edit User open
+  const openEdit = (user: UserItem) => {
+    setEditingUser(user);
     setEditForm({
-      name: u.name,
-      email: u.email,
-      role: u.role,
-      status: u.status,
-      admissionNo: u.admissionNo || "",
-      classId: u.classId || "",
-      sectionId: u.sectionId || "",
-      childIds: u.childIds ? u.childIds.map((c) => (typeof c === "object" ? c._id || c.id : c)) : [],
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      admissionNo: user.admissionNo || "",
+      classId: user.classId || "",
+      sectionId: user.sectionId || "",
+      parentId: user.parentId || "",
+      parentName: user.parentName || "",
+      parentEmail: user.parentEmail || "",
+      childIds: user.childIds ? user.childIds.map((c: any) => (typeof c === "object" ? c._id || c.id : c)) : [],
     });
     setIsEditOpen(true);
   };
@@ -229,8 +274,30 @@ export default function UsersDirectoryPage() {
     if (!editingUser) return;
 
     try {
-      await api.patch(`/api/admin/users/${editingUser.id}`, editForm);
-      toast(`User ${editForm.name} updated successfully.`);
+      const payload: any = {
+        name: editForm.name,
+        email: editForm.email,
+        role: editForm.role,
+        status: editForm.status,
+      };
+
+      if (editForm.role === "student") {
+        payload.admissionNo = editForm.admissionNo;
+        payload.classId = editForm.classId || null;
+        payload.sectionId = editForm.sectionId || null;
+        payload.parentId = editForm.parentId || null;
+        if (editForm.parentName) payload.parentName = editForm.parentName;
+        if (editForm.parentEmail) payload.parentEmail = editForm.parentEmail;
+      } else if (editForm.role === "parent") {
+        payload.childIds = editForm.childIds;
+      }
+
+      const res = await api.patch<{ message: string; user: UserItem }>(
+        `/api/admin/users/${editingUser.id}`,
+        payload
+      );
+
+      toast(res.message);
       setIsEditOpen(false);
       setEditingUser(null);
       fetchUsers();
@@ -239,19 +306,23 @@ export default function UsersDirectoryPage() {
     }
   };
 
-  // Reset Password Action
-  const handleResetPassword = async (u: UserItem) => {
-    if (!confirm(`Are you sure you want to reset the password for ${u.name}?`)) return;
+  // Reset Password
+  const handleResetPassword = async (user: UserItem) => {
+    if (!confirm(`Are you sure you want to reset password for ${user.name} (${user.email})?`)) {
+      return;
+    }
 
     try {
-      const res = await api.post<{ temporaryPassword: string }>(
-        `/api/admin/users/${u.id}/reset-password`
-      );
-      toast(`Password for ${u.name} has been reset.`);
+      const res = await api.post<{
+        message: string;
+        temporaryPassword: string;
+      }>(`/api/admin/users/${user.id}/reset-password`);
+
+      toast(res.message);
       setTempPassModal({
         isOpen: true,
-        name: u.name,
-        email: u.email,
+        name: user.name,
+        email: user.email,
         tempPass: res.temporaryPassword,
         isReset: true,
       });
@@ -261,25 +332,26 @@ export default function UsersDirectoryPage() {
     }
   };
 
-  // Disable / Enable User
-  const toggleUserStatus = async (u: UserItem) => {
-    const isDisabling = u.status === "active";
+  // Disable / Enable user
+  const toggleUserStatus = async (user: UserItem) => {
+    const isDisabling = user.status === "active";
     const endpoint = isDisabling
-      ? `/api/admin/users/${u.id}/disable`
-      : `/api/admin/users/${u.id}/enable`;
+      ? `/api/admin/users/${user.id}/disable`
+      : `/api/admin/users/${user.id}/enable`;
 
     try {
-      await api.post(endpoint);
-      toast(`User ${u.name} is now ${isDisabling ? "disabled" : "active"}.`);
+      const res = await api.post<{ message: string }>(endpoint);
+      toast(res.message);
       fetchUsers();
     } catch (err: any) {
-      toast(err.message || "Action failed", "error");
+      toast(err.message || "Failed to change user status", "error");
     }
   };
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(tempPassModal.tempPass);
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
     setCopied(true);
+    toast("Password copied to clipboard!");
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -287,39 +359,42 @@ export default function UsersDirectoryPage() {
   const selectedEditClass = classes.find((c) => c.id === editForm.classId);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Header & Actions */}
+    <div className="space-y-6 max-w-7xl mx-auto pb-10">
+      {/* Header & Quick Action */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">User Directory</h1>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight">
+            User Directory
+          </h1>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
-            Manage school user accounts, assign roles, set credentials, and govern access status.
+            Manage student, faculty, and administrative accounts, reset passwords, and assign roles.
           </p>
         </div>
 
         <button
           onClick={() => setIsAddOpen(true)}
-          className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center gap-2 shadow-xs transition-all cursor-pointer self-start sm:self-auto"
+          className="neu-btn-primary px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 self-start sm:self-auto cursor-pointer"
         >
-          <UserPlus size={15} />
-          <span>Add New User</span>
+          <UserPlus size={16} />
+          <span>Add User</span>
         </button>
       </div>
 
-      {/* Filter & Search Bar */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
-        <form onSubmit={handleSearchSubmit} className="relative w-full md:w-80">
-          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+      {/* Filter and Search Bar */}
+      <div className="neu-card p-4 sm:p-5 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+        <form onSubmit={handleSearchSubmit} className="relative w-full lg:w-80 flex items-center">
+          <Search size={16} className="absolute left-3.5 text-slate-400 pointer-events-none z-10" />
           <input
             type="text"
-            placeholder="Search by name, email, or admission no..."
+            placeholder="Search by name or email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white"
+            className="neu-input w-full pr-3.5 py-2 text-xs sm:text-sm"
+            style={{ paddingLeft: "42px" }}
           />
         </form>
 
-        <div className="flex items-center gap-2.5 w-full md:w-auto">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full lg:w-auto">
           <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
             <Filter size={14} className="text-slate-400" />
             <span>Role:</span>
@@ -330,14 +405,12 @@ export default function UsersDirectoryPage() {
               setRoleFilter(e.target.value);
               setPage(1);
             }}
-            className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="neu-input py-1.5 px-3 text-xs text-slate-700 cursor-pointer flex-1 sm:flex-initial"
           >
             <option value="all">All Roles</option>
             <option value="admin">Admin</option>
             <option value="principal">Principal</option>
-            <option value="coordinator">Coordinator</option>
             <option value="teacher">Teacher</option>
-            <option value="counsellor">Counsellor</option>
             <option value="student">Student</option>
             <option value="parent">Parent</option>
           </select>
@@ -348,7 +421,7 @@ export default function UsersDirectoryPage() {
               setStatusFilter(e.target.value);
               setPage(1);
             }}
-            className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="neu-input py-1.5 px-3 text-xs text-slate-700 cursor-pointer flex-1 sm:flex-initial"
           >
             <option value="all">All Status</option>
             <option value="active">Active</option>
@@ -358,11 +431,11 @@ export default function UsersDirectoryPage() {
       </div>
 
       {/* Users Table */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+      <div className="neu-card p-6 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-xs min-w-[650px]">
             <thead>
-              <tr className="bg-slate-50/70 border-b border-slate-200 text-slate-400 uppercase tracking-wider text-[11px]">
+              <tr className="border-b border-slate-200/70 text-slate-400 uppercase tracking-wider text-[11px]">
                 <th className="py-3 px-4 font-bold">User</th>
                 <th className="py-3 px-4 font-bold">Role</th>
                 <th className="py-3 px-4 font-bold">Details / Class</th>
@@ -374,7 +447,7 @@ export default function UsersDirectoryPage() {
               {loading ? (
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-slate-400">
-                    <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                    <div className="w-8 h-8 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
                     <span>Loading directory entries...</span>
                   </td>
                 </tr>
@@ -382,17 +455,17 @@ export default function UsersDirectoryPage() {
                 users.map((u) => {
                   const isSelf = currentUser?.id === u.id;
                   return (
-                    <tr key={u.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-bold flex items-center justify-center text-[11px] shrink-0">
+                    <tr key={u.id} className="hover:bg-white/50 transition-colors">
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold flex items-center justify-center text-xs shadow-xs shrink-0">
                             {u.name.charAt(0)}
                           </div>
                           <div>
-                            <p className="font-bold text-slate-900 flex items-center gap-1.5">
+                            <p className="font-bold text-slate-800 flex items-center gap-1.5">
                               <span>{u.name}</span>
                               {isSelf && (
-                                <span className="text-[9px] bg-indigo-50 text-indigo-700 px-1.5 py-0.2 rounded font-bold">
+                                <span className="text-[9px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full font-bold border border-indigo-200/50">
                                   You
                                 </span>
                               )}
@@ -402,13 +475,13 @@ export default function UsersDirectoryPage() {
                         </div>
                       </td>
 
-                      <td className="py-3 px-4">
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-slate-100 text-slate-700 border border-slate-200 uppercase tracking-wide">
+                      <td className="py-3.5 px-4">
+                        <span className="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-indigo-500/10 text-indigo-700 border border-indigo-200/40 uppercase tracking-wide">
                           {u.role}
                         </span>
                       </td>
 
-                      <td className="py-3 px-4 text-slate-600">
+                      <td className="py-3.5 px-4 text-slate-600">
                         {u.role === "student" && (
                           <div>
                             <span className="font-semibold text-slate-800">
@@ -418,6 +491,11 @@ export default function UsersDirectoryPage() {
                             {u.admissionNo && (
                               <span className="block text-[10px] text-slate-400 font-mono">
                                 Adm: {u.admissionNo}
+                              </span>
+                            )}
+                            {u.parentName && (
+                              <span className="inline-block mt-0.5 text-[10px] text-indigo-600 font-medium">
+                                Parent: {u.parentName}
                               </span>
                             )}
                           </div>
@@ -434,60 +512,39 @@ export default function UsersDirectoryPage() {
                         )}
                       </td>
 
-                      <td className="py-3 px-4">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            u.status === "active"
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                              : "bg-rose-50 text-rose-700 border border-rose-200"
-                          }`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              u.status === "active" ? "bg-emerald-500" : "bg-rose-500"
-                            }`}
-                          />
-                          <span className="capitalize">{u.status}</span>
-                        </span>
+                      <td className="py-3.5 px-4">
+                        <StatusChip status={u.status === "active" ? "Active" : "Inactive"} size="sm" />
                       </td>
 
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => openEdit(u)}
-                            className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                            className="neu-btn p-2 text-slate-600 hover:text-indigo-600 cursor-pointer"
                             title="Edit User"
                           >
-                            <Edit2 size={14} />
-                          </button>
-
-                          <button
-                            onClick={() => handleResetPassword(u)}
-                            className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
-                            title="Reset Temporary Password"
-                          >
-                            <KeyRound size={14} />
+                            <Edit2 size={13} />
                           </button>
 
                           <button
                             onClick={() => toggleUserStatus(u)}
                             disabled={isSelf}
-                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                            className={`neu-btn p-2 cursor-pointer ${
                               isSelf
-                                ? "text-slate-300 cursor-not-allowed"
+                                ? "text-slate-300 opacity-40 cursor-not-allowed"
                                 : u.status === "active"
-                                ? "text-slate-500 hover:text-rose-600 hover:bg-rose-50"
-                                : "text-slate-500 hover:text-emerald-600 hover:bg-emerald-50"
+                                ? "text-slate-600 hover:text-rose-600"
+                                : "text-slate-600 hover:text-emerald-600"
                             }`}
                             title={
                               isSelf
-                                ? "Cannot disable your own account"
+                                ? "Cannot modify own account"
                                 : u.status === "active"
                                 ? "Disable User"
                                 : "Enable User"
                             }
                           >
-                            {u.status === "active" ? <UserX size={14} /> : <UserCheck size={14} />}
+                            {u.status === "active" ? <UserX size={13} /> : <UserCheck size={13} />}
                           </button>
                         </div>
                       </td>
@@ -496,8 +553,8 @@ export default function UsersDirectoryPage() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={5} className="py-10 text-center text-slate-400">
-                    No users matching criteria.
+                  <td colSpan={5} className="py-8 text-center text-slate-400 text-xs">
+                    No users matching your criteria found.
                   </td>
                 </tr>
               )}
@@ -505,26 +562,26 @@ export default function UsersDirectoryPage() {
           </table>
         </div>
 
-        {/* Pagination Footer */}
-        <div className="p-3.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+        {/* Pagination Bar */}
+        <div className="pt-4 mt-4 border-t border-slate-200/60 flex items-center justify-between text-xs text-slate-500">
           <span>
-            Showing {users.length} of {total} registered users
+            Showing {users.length} of {total} entries
           </span>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
-              className="px-2.5 py-1 border border-slate-200 rounded-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 font-semibold"
+              className="neu-btn px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40 cursor-pointer"
             >
               Previous
             </button>
-            <span className="px-2 font-medium">
-              Page {page} of {totalPages}
+            <span className="font-bold text-slate-700">
+              Page {page} of {totalPages || 1}
             </span>
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages}
-              className="px-2.5 py-1 border border-slate-200 rounded-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 font-semibold"
+              className="neu-btn px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40 cursor-pointer"
             >
               Next
             </button>
@@ -532,69 +589,70 @@ export default function UsersDirectoryPage() {
         </div>
       </div>
 
-      {/* Add User Modal */}
+      {/* ADD USER MODAL */}
       {isAddOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200 space-y-5 animate-in fade-in-50">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h2 className="text-base font-bold text-slate-900">Provision New User Account</h2>
+        <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="neu-card bg-[#f0f3f8] max-w-lg w-full p-6 sm:p-7 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200/60">
+              <div>
+                <h2 className="text-base font-extrabold text-slate-800">Add New User</h2>
+                <p className="text-xs text-slate-400 font-medium">Provision credentials for a student, teacher or staff</p>
+              </div>
               <button
                 onClick={() => setIsAddOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                className="neu-circle w-8 h-8 text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X size={16} />
               </button>
             </div>
 
-            <form onSubmit={handleAddSubmit} className="space-y-4 text-xs">
+            <form onSubmit={handleAddSubmit} className="mt-5 space-y-4 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Full Name</label>
+                <label className="block font-bold text-slate-700 mb-1">Full Name</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Meera Krishnan"
                   value={addForm.name}
                   onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white"
+                  className="neu-input w-full"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Email Address</label>
+                <label className="block font-bold text-slate-700 mb-1">Email Address</label>
                 <input
                   type="email"
                   required
                   placeholder="e.g. meera@school.edu"
                   value={addForm.email}
                   onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white"
+                  className="neu-input w-full"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">System Role</label>
+                  <label className="block font-bold text-slate-700 mb-1">System Role</label>
                   <select
                     value={addForm.role}
                     onChange={(e) => setAddForm({ ...addForm, role: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="neu-input w-full cursor-pointer"
                   >
                     <option value="student">Student</option>
                     <option value="teacher">Teacher</option>
                     <option value="parent">Parent</option>
                     <option value="principal">Principal</option>
-                    <option value="coordinator">Coordinator</option>
-                    <option value="counsellor">Counsellor</option>
                     <option value="admin">Admin</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Status</label>
+                  <label className="block font-bold text-slate-700 mb-1">Status</label>
                   <select
                     value={addForm.status}
                     onChange={(e) => setAddForm({ ...addForm, status: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="neu-input w-full cursor-pointer"
                   >
                     <option value="active">Active</option>
                     <option value="disabled">Disabled</option>
@@ -604,30 +662,30 @@ export default function UsersDirectoryPage() {
 
               {/* Dynamic student fields */}
               {addForm.role === "student" && (
-                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-                  <p className="font-bold text-[11px] text-slate-500 uppercase tracking-wider">
-                    Student Information
+                <div className="neu-inset p-4 space-y-3">
+                  <p className="font-extrabold text-[11px] text-slate-500 uppercase tracking-wider">
+                    Student Details
                   </p>
                   <div>
-                    <label className="block font-medium text-slate-700 mb-1">Admission Number</label>
+                    <label className="block font-semibold text-slate-700 mb-1">Admission Number</label>
                     <input
                       type="text"
                       placeholder="e.g. ADM-2026-042"
                       value={addForm.admissionNo}
                       onChange={(e) => setAddForm({ ...addForm, admissionNo: e.target.value })}
-                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-md text-slate-900"
+                      className="neu-input w-full"
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div>
-                      <label className="block font-medium text-slate-700 mb-1">Class</label>
+                      <label className="block font-semibold text-slate-700 mb-1">Class</label>
                       <select
                         value={addForm.classId}
                         onChange={(e) =>
                           setAddForm({ ...addForm, classId: e.target.value, sectionId: "" })
                         }
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-slate-900"
+                        className="neu-input w-full cursor-pointer"
                       >
                         <option value="">Select Class</option>
                         {classes.map((c) => (
@@ -639,12 +697,12 @@ export default function UsersDirectoryPage() {
                     </div>
 
                     <div>
-                      <label className="block font-medium text-slate-700 mb-1">Section</label>
+                      <label className="block font-semibold text-slate-700 mb-1">Section</label>
                       <select
                         value={addForm.sectionId}
                         onChange={(e) => setAddForm({ ...addForm, sectionId: e.target.value })}
                         disabled={!selectedClass}
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-slate-900 disabled:opacity-40"
+                        className="neu-input w-full cursor-pointer disabled:opacity-40"
                       >
                         <option value="">Select Section</option>
                         {selectedClass?.sections.map((s) => (
@@ -655,13 +713,71 @@ export default function UsersDirectoryPage() {
                       </select>
                     </div>
                   </div>
+
+                  {/* Linked Parent Information */}
+                  <div className="border-t border-slate-200/80 pt-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="font-extrabold text-[11px] text-indigo-700 uppercase tracking-wider">
+                        Connected Parent / Guardian
+                      </p>
+                      <span className="text-[10px] text-slate-400">Auto-Linked</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      Connect to an existing parent or enter new parent details to automatically create and link their account.
+                    </p>
+
+                    {allParents.length > 0 && (
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
+                          Select Existing Parent (Optional)
+                        </label>
+                        <select
+                          value={addForm.parentId}
+                          onChange={(e) => setAddForm({ ...addForm, parentId: e.target.value })}
+                          className="neu-input w-full cursor-pointer text-xs"
+                        >
+                          <option value="">-- Or enter new parent details below --</option>
+                          {allParents.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} ({p.email})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {!addForm.parentId && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                        <div>
+                          <label className="block font-semibold text-slate-700 mb-1 text-[11px]">Parent Name</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Rajesh Sharma"
+                            value={addForm.parentName}
+                            onChange={(e) => setAddForm({ ...addForm, parentName: e.target.value })}
+                            className="neu-input w-full text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-slate-700 mb-1 text-[11px]">Parent Email</label>
+                          <input
+                            type="email"
+                            placeholder="e.g. parent.sharma@learnmate.test"
+                            value={addForm.parentEmail}
+                            onChange={(e) => setAddForm({ ...addForm, parentEmail: e.target.value })}
+                            className="neu-input w-full text-xs"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
               {/* Dynamic parent fields */}
               {addForm.role === "parent" && (
-                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-                  <p className="font-bold text-[11px] text-slate-500 uppercase tracking-wider">
+                <div className="neu-inset p-4 space-y-2">
+                  <p className="font-extrabold text-[11px] text-slate-500 uppercase tracking-wider">
                     Link Children (Students)
                   </p>
                   <select
@@ -671,7 +787,7 @@ export default function UsersDirectoryPage() {
                       const selected = Array.from(e.target.selectedOptions, (option) => option.value);
                       setAddForm({ ...addForm, childIds: selected });
                     }}
-                    className="w-full h-24 px-2 py-1 bg-white border border-slate-200 rounded-md text-slate-900"
+                    className="neu-input w-full h-28 cursor-pointer"
                   >
                     {allStudents.map((s) => (
                       <option key={s.id} value={s.id}>
@@ -683,19 +799,19 @@ export default function UsersDirectoryPage() {
                 </div>
               )}
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              <div className="pt-4 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setIsAddOpen(false)}
-                  className="px-3.5 py-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 font-semibold cursor-pointer"
+                  className="neu-btn px-4 py-2 rounded-xl text-slate-600 font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow-xs cursor-pointer"
+                  className="neu-btn-primary px-5 py-2 rounded-xl font-bold cursor-pointer"
                 >
-                  Create &amp; Generate Credentials
+                  Create User
                 </button>
               </div>
             </form>
@@ -703,96 +819,108 @@ export default function UsersDirectoryPage() {
         </div>
       )}
 
-      {/* Edit User Modal */}
+      {/* EDIT USER MODAL */}
       {isEditOpen && editingUser && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200 space-y-5 animate-in fade-in-50">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h2 className="text-base font-bold text-slate-900">Edit User Details</h2>
+        <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="neu-card bg-[#f0f3f8] max-w-lg w-full p-6 sm:p-7 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200/60">
+              <div>
+                <h2 className="text-base font-extrabold text-slate-800">Edit User Details</h2>
+                <p className="text-xs text-slate-400 font-medium">Updating account for {editingUser.name}</p>
+              </div>
               <button
                 onClick={() => setIsEditOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                className="neu-circle w-8 h-8 text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X size={16} />
               </button>
             </div>
 
-            <form onSubmit={handleEditSubmit} className="space-y-4 text-xs">
+            <form onSubmit={handleEditSubmit} className="mt-5 space-y-4 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Full Name</label>
+                <label className="block font-bold text-slate-700 mb-1">Full Name</label>
                 <input
                   type="text"
                   required
                   value={editForm.name}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white"
+                  className="neu-input w-full"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Email Address</label>
+                <label className="block font-bold text-slate-700 mb-1">Email Address</label>
                 <input
                   type="email"
                   required
                   value={editForm.email}
                   onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white"
+                  className="neu-input w-full"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Role</label>
+                  <label className="block font-bold text-slate-700 mb-1">System Role</label>
                   <select
                     value={editForm.role}
-                    disabled={currentUser?.id === editingUser.id}
                     onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 disabled:opacity-50"
+                    disabled={currentUser?.id === editingUser.id}
+                    className="neu-input w-full cursor-pointer disabled:opacity-40"
                   >
                     <option value="student">Student</option>
                     <option value="teacher">Teacher</option>
                     <option value="parent">Parent</option>
                     <option value="principal">Principal</option>
-                    <option value="coordinator">Coordinator</option>
-                    <option value="counsellor">Counsellor</option>
                     <option value="admin">Admin</option>
                   </select>
+                  {currentUser?.id === editingUser.id && (
+                    <p className="text-[10px] text-amber-600 mt-1">Cannot demote yourself</p>
+                  )}
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Status</label>
+                  <label className="block font-bold text-slate-700 mb-1">Status</label>
                   <select
                     value={editForm.status}
+                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value as any })}
                     disabled={currentUser?.id === editingUser.id}
-                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 disabled:opacity-50"
+                    className="neu-input w-full cursor-pointer disabled:opacity-40"
                   >
                     <option value="active">Active</option>
                     <option value="disabled">Disabled</option>
                   </select>
+                  {currentUser?.id === editingUser.id && (
+                    <p className="text-[10px] text-amber-600 mt-1">Cannot disable yourself</p>
+                  )}
                 </div>
               </div>
 
+              {/* Dynamic student fields in edit */}
               {editForm.role === "student" && (
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <div className="neu-inset p-4 space-y-3">
+                  <p className="font-extrabold text-[11px] text-slate-500 uppercase tracking-wider">
+                    Student Details
+                  </p>
                   <div>
-                    <label className="block font-medium text-slate-700 mb-1">Admission Number</label>
+                    <label className="block font-semibold text-slate-700 mb-1">Admission Number</label>
                     <input
                       type="text"
                       value={editForm.admissionNo}
                       onChange={(e) => setEditForm({ ...editForm, admissionNo: e.target.value })}
-                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-md text-slate-900"
+                      className="neu-input w-full"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div>
-                      <label className="block font-medium text-slate-700 mb-1">Class</label>
+                      <label className="block font-semibold text-slate-700 mb-1">Class</label>
                       <select
                         value={editForm.classId}
                         onChange={(e) =>
                           setEditForm({ ...editForm, classId: e.target.value, sectionId: "" })
                         }
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-slate-900"
+                        className="neu-input w-full cursor-pointer"
                       >
                         <option value="">Select Class</option>
                         {classes.map((c) => (
@@ -804,12 +932,12 @@ export default function UsersDirectoryPage() {
                     </div>
 
                     <div>
-                      <label className="block font-medium text-slate-700 mb-1">Section</label>
+                      <label className="block font-semibold text-slate-700 mb-1">Section</label>
                       <select
                         value={editForm.sectionId}
                         onChange={(e) => setEditForm({ ...editForm, sectionId: e.target.value })}
                         disabled={!selectedEditClass}
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-slate-900 disabled:opacity-40"
+                        className="neu-input w-full cursor-pointer disabled:opacity-40"
                       >
                         <option value="">Select Section</option>
                         {selectedEditClass?.sections.map((s) => (
@@ -820,20 +948,99 @@ export default function UsersDirectoryPage() {
                       </select>
                     </div>
                   </div>
+
+                  {/* Linked Parent Information in Edit */}
+                  <div className="border-t border-slate-200/80 pt-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="font-extrabold text-[11px] text-indigo-700 uppercase tracking-wider">
+                        Connected Parent / Guardian
+                      </p>
+                      <span className="text-[10px] text-slate-400">Auto-Linked</span>
+                    </div>
+
+                    {allParents.length > 0 && (
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
+                          Select Parent
+                        </label>
+                        <select
+                          value={editForm.parentId}
+                          onChange={(e) => setEditForm({ ...editForm, parentId: e.target.value })}
+                          className="neu-input w-full cursor-pointer text-xs"
+                        >
+                          <option value="">-- No parent linked / Or enter below --</option>
+                          {allParents.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} ({p.email})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {!editForm.parentId && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                        <div>
+                          <label className="block font-semibold text-slate-700 mb-1 text-[11px]">Parent Name</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Rajesh Sharma"
+                            value={editForm.parentName}
+                            onChange={(e) => setEditForm({ ...editForm, parentName: e.target.value })}
+                            className="neu-input w-full text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-slate-700 mb-1 text-[11px]">Parent Email</label>
+                          <input
+                            type="email"
+                            placeholder="e.g. parent.sharma@learnmate.test"
+                            value={editForm.parentEmail}
+                            onChange={(e) => setEditForm({ ...editForm, parentEmail: e.target.value })}
+                            className="neu-input w-full text-xs"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              {/* Dynamic parent fields in edit */}
+              {editForm.role === "parent" && (
+                <div className="neu-inset p-4 space-y-2">
+                  <p className="font-extrabold text-[11px] text-slate-500 uppercase tracking-wider">
+                    Linked Children
+                  </p>
+                  <select
+                    multiple
+                    value={editForm.childIds}
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.selectedOptions, (option) => option.value);
+                      setEditForm({ ...editForm, childIds: selected });
+                    }}
+                    className="neu-input w-full h-28 cursor-pointer"
+                  >
+                    {allStudents.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="pt-4 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setIsEditOpen(false)}
-                  className="px-3.5 py-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 font-semibold cursor-pointer"
+                  className="neu-btn px-4 py-2 rounded-xl text-slate-600 font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow-xs cursor-pointer"
+                  className="neu-btn-primary px-5 py-2 rounded-xl font-bold cursor-pointer"
                 >
                   Save Changes
                 </button>
@@ -843,59 +1050,56 @@ export default function UsersDirectoryPage() {
         </div>
       )}
 
-      {/* Temporary Password Display Modal */}
+      {/* TEMPORARY PASSWORD ONE-TIME MODAL */}
       {tempPassModal.isOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4 animate-in fade-in-50">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="neu-card bg-[#f0f3f8] max-w-md w-full p-6 sm:p-7 space-y-5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center shrink-0">
-                <KeyRound size={20} />
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white shadow-md shadow-amber-500/20">
+                <AlertTriangle size={22} />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-900">
-                  {tempPassModal.isReset ? "Password Reset Successfully" : "Account Provisioned"}
+                <h3 className="text-base font-extrabold text-slate-800">
+                  {tempPassModal.isReset ? "Password Reset Generated" : "Temporary Credentials"}
                 </h3>
-                <p className="text-xs text-slate-500">
-                  Temporary credentials for <strong>{tempPassModal.name}</strong> ({tempPassModal.email})
-                </p>
+                <p className="text-xs text-slate-400 font-medium">One-Time Display Warning</p>
               </div>
             </div>
 
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2.5 text-xs text-amber-800 leading-relaxed">
-              <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
-              <span>
-                <strong>Important:</strong> This temporary password will <strong>NOT</strong> be displayed again. Please copy and provide it to the user now. They will be forced to change it upon first login.
-              </span>
+            <div className="neu-inset p-3.5 text-xs text-amber-800 leading-relaxed">
+              Copy this temporary password now. For security purposes, it will <strong>NOT</strong> be displayed again.
             </div>
 
-            <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                Generated Temporary Password
-              </label>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-sm font-bold text-slate-900 select-all">
+            <div className="space-y-1.5 text-xs">
+              <p className="text-slate-500">
+                Account: <strong className="text-slate-800">{tempPassModal.name}</strong> ({tempPassModal.email})
+              </p>
+              <div className="neu-inset p-3 flex items-center justify-between">
+                <span className="font-mono text-base font-extrabold text-slate-900 tracking-wider">
                   {tempPassModal.tempPass}
-                </div>
+                </span>
                 <button
-                  onClick={copyToClipboard}
-                  className={`px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-                    copied
-                      ? "bg-emerald-600 text-white"
-                      : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs"
-                  }`}
+                  type="button"
+                  onClick={() => copyToClipboard(tempPassModal.tempPass)}
+                  className="neu-btn-primary px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
                 >
                   {copied ? <Check size={14} /> : <Copy size={14} />}
-                  <span>{copied ? "Copied" : "Copy"}</span>
+                  <span>{copied ? "Copied!" : "Copy"}</span>
                 </button>
               </div>
             </div>
 
+            <div className="text-[11px] text-slate-500 leading-normal">
+              The user will be required to change this password immediately upon their first login before accessing portal features.
+            </div>
+
             <div className="pt-2">
               <button
+                type="button"
                 onClick={() => setTempPassModal({ ...tempPassModal, isOpen: false })}
-                className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                className="w-full neu-btn py-2.5 rounded-xl font-bold text-xs text-slate-700 cursor-pointer"
               >
-                I Have Copied The Password
+                I Have Safely Copied The Password
               </button>
             </div>
           </div>

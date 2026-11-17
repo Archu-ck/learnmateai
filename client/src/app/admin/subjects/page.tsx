@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
-import { BookOpen, Plus, Edit2, Trash2, X, Layers } from "lucide-react";
+import { BookOpen, Plus, Edit2, Trash2, X } from "lucide-react";
 
 interface SubjectItem {
   id: string;
@@ -99,10 +99,10 @@ export default function SubjectsPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 max-w-5xl mx-auto pb-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Academic Subjects</h1>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight">Academic Subjects</h1>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
             Define curriculum subjects and attach them to target classes.
           </p>
@@ -110,18 +110,18 @@ export default function SubjectsPage() {
 
         <button
           onClick={openAdd}
-          className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center gap-2 shadow-xs transition-all cursor-pointer self-start sm:self-auto"
+          className="neu-btn-primary px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer self-start sm:self-auto"
         >
-          <Plus size={15} />
+          <Plus size={16} />
           <span>Add Subject</span>
         </button>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+      <div className="neu-card p-6 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-xs min-w-[500px]">
             <thead>
-              <tr className="bg-slate-50/70 border-b border-slate-200 text-slate-400 uppercase tracking-wider text-[11px]">
+              <tr className="border-b border-slate-200/70 text-slate-400 uppercase tracking-wider text-[11px]">
                 <th className="py-3 px-4 font-bold">Subject Name</th>
                 <th className="py-3 px-4 font-bold">Code</th>
                 <th className="py-3 px-4 font-bold">Assigned Classes</th>
@@ -132,25 +132,26 @@ export default function SubjectsPage() {
               {loading ? (
                 <tr>
                   <td colSpan={4} className="py-10 text-center text-slate-400">
-                    Loading subjects...
+                    <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                    <span>Loading subjects...</span>
                   </td>
                 </tr>
               ) : subjects.length > 0 ? (
                 subjects.map((s) => (
-                  <tr key={s.id} className="hover:bg-slate-50/50">
-                    <td className="py-3 px-4 font-bold text-slate-900">{s.name}</td>
-                    <td className="py-3 px-4">
-                      <span className="px-2 py-0.5 text-[11px] font-mono font-bold bg-slate-100 text-slate-700 rounded border border-slate-200">
+                  <tr key={s.id} className="hover:bg-white/50 transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-slate-800">{s.name}</td>
+                    <td className="py-3.5 px-4">
+                      <span className="px-2.5 py-1 text-[11px] font-mono font-bold bg-indigo-500/10 text-indigo-700 rounded-lg border border-indigo-200/40">
                         {s.code}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
-                      <div className="flex flex-wrap gap-1">
+                    <td className="py-3.5 px-4">
+                      <div className="flex flex-wrap gap-1.5">
                         {s.classes && s.classes.length > 0 ? (
                           s.classes.map((c) => (
                             <span
                               key={c.id}
-                              className="px-2 py-0.5 text-[10px] font-bold rounded bg-indigo-50 text-indigo-700 border border-indigo-100"
+                              className="px-2.5 py-0.5 text-[10px] font-bold rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100"
                             >
                               {c.name}
                             </span>
@@ -160,21 +161,21 @@ export default function SubjectsPage() {
                         )}
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
+                    <td className="py-3.5 px-4 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => openEdit(s)}
-                          className="p-1.5 text-slate-400 hover:text-indigo-600 rounded"
+                          className="neu-btn p-2 text-slate-600 hover:text-indigo-600 cursor-pointer"
                           title="Edit Subject"
                         >
-                          <Edit2 size={14} />
+                          <Edit2 size={13} />
                         </button>
                         <button
                           onClick={() => handleDelete(s)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded"
+                          className="neu-btn p-2 text-slate-600 hover:text-rose-600 cursor-pointer"
                           title="Delete Subject"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={13} />
                         </button>
                       </div>
                     </td>
@@ -194,44 +195,44 @@ export default function SubjectsPage() {
 
       {/* Add / Edit Modal */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h2 className="text-sm font-bold text-slate-900">
+        <div className="fixed inset-0 z-50 bg-slate-900/30 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="neu-card bg-[#f0f3f8] max-w-md w-full p-6 sm:p-7 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200/60">
+              <h2 className="text-base font-extrabold text-slate-800">
                 {editingSubject ? "Edit Subject" : "Create New Subject"}
               </h2>
-              <button onClick={() => setIsOpen(false)} className="text-slate-400 hover:text-slate-600 p-1">
+              <button onClick={() => setIsOpen(false)} className="neu-circle w-8 h-8 text-slate-400 hover:text-slate-600 cursor-pointer">
                 <X size={16} />
               </button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Subject Name</label>
+                <label className="block font-bold text-slate-700 mb-1">Subject Name</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Mathematics or Physics"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white"
+                  className="neu-input w-full"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Subject Code</label>
+                <label className="block font-bold text-slate-700 mb-1">Subject Code</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. MATH101"
                   value={form.code}
                   onChange={(e) => setForm({ ...form, code: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white"
+                  className="neu-input w-full uppercase"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Applicable Classes</label>
+                <label className="block font-bold text-slate-700 mb-1">Applicable Classes</label>
                 <select
                   multiple
                   value={form.classIds}
@@ -239,7 +240,7 @@ export default function SubjectsPage() {
                     const selected = Array.from(e.target.selectedOptions, (o) => o.value);
                     setForm({ ...form, classIds: selected });
                   }}
-                  className="w-full h-28 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900"
+                  className="neu-input w-full h-28 cursor-pointer"
                 >
                   {classes.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -250,17 +251,17 @@ export default function SubjectsPage() {
                 <p className="text-[10px] text-slate-400 mt-1">Hold Ctrl / Cmd to select multiple classes</p>
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              <div className="pt-3 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="px-3 py-1.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 font-semibold"
+                  className="neu-btn px-4 py-2 rounded-xl text-slate-600 font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow-xs"
+                  className="neu-btn-primary px-5 py-2 rounded-xl font-bold cursor-pointer"
                 >
                   Save Subject
                 </button>

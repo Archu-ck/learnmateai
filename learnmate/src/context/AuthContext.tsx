@@ -60,12 +60,19 @@ export function prefetchRoleData(role: string) {
       "/api/student/planner",
       "/api/student/progress",
       "/api/student/attendance",
+      "/api/chat/threads",
+      "/api/chat/settings",
+      "/api/ai/doubt/conversations",
       "/api/notifications",
     ],
     teacher: [
       "/api/teacher/dashboard",
       "/api/teacher/classes",
+      "/api/teacher/assignments",
       "/api/teacher/workload",
+      "/api/chat/threads",
+      "/api/chat/settings",
+      "/api/teacher/questions",
       "/api/notifications",
     ],
     parent: [
@@ -95,11 +102,46 @@ export function prefetchRoleData(role: string) {
 
   const endpoints = roleEndpoints[role] || [];
   if (endpoints.length > 0) {
-    const trigger = () => api.prefetch(endpoints);
+    const trigger = async () => {
+      // 1. Prefetch tier-1 endpoints in parallel
+      await api.prefetch(endpoints);
+
+      // 2. Cascade prefetch deep sub-resources silently
+      if (role === "student") {
+        try {
+          const subsRes = api.getCached<{ subjects: any[] }>("/api/student/subjects");
+          if (subsRes?.subjects?.length) {
+            const subDetailUrls = subsRes.subjects.map((s) => `/api/student/subjects/${s.id}`);
+            api.prefetch(subDetailUrls);
+          }
+          const threadsRes = api.getCached<{ threads: any[] }>("/api/chat/threads");
+          if (threadsRes?.threads?.length) {
+            api.prefetch(`/api/chat/thread?threadId=${threadsRes.threads[0]._id}`);
+          }
+        } catch {}
+      } else if (role === "teacher") {
+        try {
+          const classesRes = api.getCached<{ classes: any[] }>("/api/teacher/classes");
+          if (classesRes?.classes?.length) {
+            const classUrls = classesRes.classes.flatMap((c) => [
+              `/api/teacher/assignments?classId=${c.classId}&section=${c.section}`,
+              `/api/teacher/workload/calendar?classId=${c.classId}&section=${c.section}`,
+              `/api/teacher/classes/${c.id || c._id}`,
+            ]);
+            api.prefetch(classUrls);
+          }
+          const threadsRes = api.getCached<{ threads: any[] }>("/api/chat/threads");
+          if (threadsRes?.threads?.length) {
+            api.prefetch(`/api/chat/thread?threadId=${threadsRes.threads[0]._id}`);
+          }
+        } catch {}
+      }
+    };
+
     if ("requestIdleCallback" in window) {
       (window as any).requestIdleCallback(trigger);
     } else {
-      setTimeout(trigger, 150);
+      setTimeout(trigger, 100);
     }
   }
 }

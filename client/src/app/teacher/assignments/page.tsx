@@ -60,25 +60,41 @@ interface DayWorkload {
 export default function TeacherAssignmentsManagerPage() {
   const { toast } = useToast();
 
-  const [classes, setClasses] = useState<TeacherClassOption[]>([]);
+  const [classes, setClasses] = useState<TeacherClassOption[]>(() => {
+    return api.getCached<{ classes: TeacherClassOption[] }>("/api/teacher/classes")?.classes || [];
+  });
   const [selectedClassIndex, setSelectedClassIndex] = useState<number>(0);
 
-  const [assignments, setAssignments] = useState<AssignmentItem[]>([]);
-  const [calendarDays, setCalendarDays] = useState<DayWorkload[]>([]);
-  const [loading, setLoading] = useState(true);
+  const initialClass = classes[0];
+  const [assignments, setAssignments] = useState<AssignmentItem[]>(() => {
+    if (!initialClass) return [];
+    const url = `/api/teacher/assignments?classId=${initialClass.classId}&section=${initialClass.section}`;
+    return api.getCached<{ assignments: AssignmentItem[] }>(url)?.assignments || [];
+  });
+
+  const [calendarDays, setCalendarDays] = useState<DayWorkload[]>(() => {
+    if (!initialClass) return [];
+    const url = `/api/teacher/workload/calendar?classId=${initialClass.classId}&section=${initialClass.section}`;
+    return api.getCached<{ days: DayWorkload[] }>(url)?.days || [];
+  });
+
+  const [loading, setLoading] = useState<boolean>(() => {
+    return classes.length === 0 && assignments.length === 0;
+  });
 
   // Load classes
   useEffect(() => {
+    const hasCachedClasses = classes.length > 0;
     async function loadClasses() {
       try {
         const res = await api.get<{ classes: TeacherClassOption[] }>("/api/teacher/classes");
         const list = res.classes || [];
         setClasses(list);
-        if (list.length > 0) {
+        if (list.length > 0 && selectedClassIndex === 0) {
           setSelectedClassIndex(0);
         }
       } catch (err: any) {
-        toast(err.message || "Failed to load classes", "error");
+        if (!hasCachedClasses) toast(err.message || "Failed to load classes", "error");
       }
     }
     loadClasses();
@@ -90,22 +106,29 @@ export default function TeacherAssignmentsManagerPage() {
   useEffect(() => {
     if (!activeClass) return;
 
+    const assignUrl = `/api/teacher/assignments?classId=${activeClass.classId}&section=${activeClass.section}`;
+    const calUrl = `/api/teacher/workload/calendar?classId=${activeClass.classId}&section=${activeClass.section}`;
+
+    const cachedAssign = api.getCached<{ assignments: AssignmentItem[] }>(assignUrl);
+    const cachedCal = api.getCached<{ days: DayWorkload[] }>(calUrl);
+
+    if (cachedAssign?.assignments) setAssignments(cachedAssign.assignments);
+    if (cachedCal?.days) setCalendarDays(cachedCal.days);
+
+    const hasCached = !!(cachedAssign?.assignments && cachedCal?.days);
+
     async function loadData() {
       try {
-        setLoading(true);
+        if (!hasCached) setLoading(true);
         const [assignRes, calendarRes] = await Promise.all([
-          api.get<{ assignments: AssignmentItem[] }>(
-            `/api/teacher/assignments?classId=${activeClass.classId}&section=${activeClass.section}`
-          ),
-          api.get<{ days: DayWorkload[] }>(
-            `/api/teacher/workload/calendar?classId=${activeClass.classId}&section=${activeClass.section}`
-          ),
+          api.get<{ assignments: AssignmentItem[] }>(assignUrl),
+          api.get<{ days: DayWorkload[] }>(calUrl),
         ]);
 
         setAssignments(assignRes.assignments || []);
         setCalendarDays(calendarRes.days || []);
       } catch (err: any) {
-        toast(err.message || "Failed to load assignment manager data", "error");
+        if (!hasCached) toast(err.message || "Failed to load assignment manager data", "error");
       } finally {
         setLoading(false);
       }

@@ -61,6 +61,12 @@ app.use('/api/student', studentRoutes);
 const teacherRoutes = require('./routes/teacherRoutes');
 app.use('/api/teacher', teacherRoutes);
 
+const parentRoutes = require('./routes/parentRoutes');
+app.use('/api/parent', parentRoutes);
+
+const principalRoutes = require('./routes/principalRoutes');
+app.use('/api/principal', principalRoutes);
+
 const chatRoutes = require('./routes/chatRoutes');
 app.use('/api/chat', chatRoutes);
 

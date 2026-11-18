@@ -29,6 +29,14 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
+// Normalize duplicate slashes in incoming request URLs (e.g. //api/auth/login -> /api/auth/login)
+app.use((req, res, next) => {
+  if (req.url && req.url.startsWith('//')) {
+    req.url = req.url.replace(/^\/+/, '/');
+  }
+  next();
+});
+
 const authRoutes = require('./routes/authRoutes');
 app.use('/api/auth', authRoutes);
 

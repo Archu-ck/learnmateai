@@ -392,15 +392,48 @@ Regarding your question about: *"${lastMsg.slice(0, 50)}..."*
       };
     }
 
-    // 5. Estimate Effort
-    if (p.includes('estimate the realistic student effort') || responseSchema?.properties?.recommendedDailyPace) {
+    // 5. Estimate Effort / Smart Assignment Manager
+    if (p.includes('estimate the realistic student effort') || responseSchema?.properties?.recommendedDailyPace || responseSchema?.properties?.isTooLarge || responseSchema?.properties?.readingMinutes) {
+      const isHuge = p.includes('15') || p.includes('12') || p.includes('mega') || p.includes('extensive') || prompt.length > 500;
+      const estMin = isHuge ? 75 : 35;
       return {
         data: {
-          estimatedMinutes: 35,
-          recommendedDailyPace: '15-20 mins/day over 2 days',
-          rationale: 'Moderate conceptual problem set requiring variable transposition and verification.',
+          estimatedMinutes: estMin,
+          difficultyLevel: isHuge ? 'Hard' : 'Medium',
+          readingMinutes: isHuge ? 15 : 8,
+          solvingMinutes: isHuge ? 50 : 22,
+          reviewMinutes: isHuge ? 10 : 5,
+          rationale: isHuge
+            ? 'Large multi-step problem set covering extensive chapter objectives. Exceeds recommended single-session duration.'
+            : 'Moderate conceptual problem set requiring variable transposition and verification.',
+          pacingAdvice: isHuge
+            ? 'Split across 2 consecutive study days (35-40 min each) to keep daily homework within the 90 min max limit.'
+            : 'Complete in a single 35-minute focused evening session.',
+          isTooLarge: isHuge,
+          largeWarning: isHuge
+            ? 'Assignment exceeds 60 minutes for a single subject. This poses homework overload when combined with other subjects.'
+            : '',
+          splitSuggestion: isHuge
+            ? 'Partition into Part 1 (Foundational questions) and Part 2 (Applied multi-step word problems).'
+            : '',
+          recommendedParts: isHuge
+            ? [
+                {
+                  partNumber: 1,
+                  title: 'Part 1: Core Foundation Problems',
+                  scope: 'Questions 1 to 6 covering core formulas and direct substitution.',
+                  estimatedMinutes: 38,
+                },
+                {
+                  partNumber: 2,
+                  title: 'Part 2: Advanced Applied Problems',
+                  scope: 'Questions 7 to 12 covering complex word scenarios and proofs.',
+                  estimatedMinutes: 37,
+                },
+              ]
+            : [],
         },
-        tokens: { promptTokens: 40, candidatesTokens: 30, totalTokens: 70 },
+        tokens: { promptTokens: 60, candidatesTokens: 60, totalTokens: 120 },
       };
     }
 

@@ -267,8 +267,14 @@ export default function ClassWorkspacePage({
     e.preventDefault();
     if (!data) return;
     try {
+      const validTopicId =
+        assignmentForm.topicId && assignmentForm.topicId.length === 24
+          ? assignmentForm.topicId
+          : undefined;
+
       await api.post("/api/teacher/assignments", {
         ...assignmentForm,
+        topicId: validTopicId,
         classId: data.workspace.classId,
         section: data.workspace.section,
         subjectId: data.workspace.subjectId,
@@ -388,8 +394,14 @@ export default function ClassWorkspacePage({
     e.preventDefault();
     if (!data) return;
     try {
+      const validTopicId =
+        lessonForm.topicId && lessonForm.topicId.length === 24
+          ? lessonForm.topicId
+          : undefined;
+
       await api.post("/api/teacher/lessons", {
         ...lessonForm,
+        topicId: validTopicId,
         subjectId: data.workspace.subjectId,
       });
       toast("Lesson published to student portal!", "success");

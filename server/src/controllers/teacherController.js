@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const TeacherAssignment = require('../models/TeacherAssignment');
 const Class = require('../models/Class');
 const Subject = require('../models/Subject');
@@ -27,6 +28,19 @@ const SmartAssignmentEstimateSchema = z.object({
   reviewMinutes: z.number(),
   rationale: z.string(),
   pacingAdvice: z.string(),
+  isTooLarge: z.boolean(),
+  largeWarning: z.string().optional(),
+  splitSuggestion: z.string().optional(),
+  recommendedParts: z
+    .array(
+      z.object({
+        partNumber: z.number(),
+        title: z.string(),
+        scope: z.string(),
+        estimatedMinutes: z.number(),
+      })
+    )
+    .optional(),
 });
 
 const GeminiSmartAssignmentEstimateSchema = {
@@ -39,6 +53,22 @@ const GeminiSmartAssignmentEstimateSchema = {
     reviewMinutes: { type: 'INTEGER' },
     rationale: { type: 'STRING' },
     pacingAdvice: { type: 'STRING' },
+    isTooLarge: { type: 'BOOLEAN' },
+    largeWarning: { type: 'STRING' },
+    splitSuggestion: { type: 'STRING' },
+    recommendedParts: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          partNumber: { type: 'INTEGER' },
+          title: { type: 'STRING' },
+          scope: { type: 'STRING' },
+          estimatedMinutes: { type: 'INTEGER' },
+        },
+        required: ['partNumber', 'title', 'scope', 'estimatedMinutes'],
+      },
+    },
   },
   required: [
     'estimatedMinutes',
@@ -48,6 +78,7 @@ const GeminiSmartAssignmentEstimateSchema = {
     'reviewMinutes',
     'rationale',
     'pacingAdvice',
+    'isTooLarge',
   ],
 };
 
@@ -306,6 +337,7 @@ async function createTeacherAssignment(req, res) {
       dueDate,
       totalMarks,
       estimatedMinutes,
+      estimatedEffortReasoning,
       aiHelpLevel,
       latePolicy,
       resubmissionAllowed,
@@ -313,18 +345,27 @@ async function createTeacherAssignment(req, res) {
       status,
     } = req.body;
 
+    if (!title || !classId || !section || !subjectId || !dueDate) {
+      return res.status(400).json({
+        error: 'Missing required assignment fields (title, class, section, subject, or due date)',
+      });
+    }
+
+    const isValidTopic = topicId && mongoose.Types.ObjectId.isValid(topicId);
+
     const newAssignment = await Assignment.create({
-      title,
+      title: title.trim(),
       classId,
       section: section.trim().toUpperCase(),
       subjectId,
-      topicId: topicId || null,
+      topicId: isValidTopic ? topicId : null,
       teacherId: teacher._id,
       description: description || '',
       attachments: attachments || [],
       dueDate: new Date(dueDate),
-      totalMarks: totalMarks || 100,
-      estimatedMinutes: estimatedMinutes || 45,
+      totalMarks: Number(totalMarks) || 20,
+      estimatedMinutes: Number(estimatedMinutes) || 45,
+      estimatedEffortReasoning: estimatedEffortReasoning || '',
       aiHelpLevel: aiHelpLevel || 'Hints only',
       latePolicy: latePolicy || 'allowed',
       resubmissionAllowed: resubmissionAllowed !== false,
@@ -339,7 +380,7 @@ async function createTeacherAssignment(req, res) {
     });
   } catch (err) {
     console.error('createTeacherAssignment error:', err);
-    return res.status(500).json({ error: 'Failed to create assignment' });
+    return res.status(500).json({ error: err.message || 'Failed to create assignment' });
   }
 }
 
@@ -549,9 +590,11 @@ async function createQuestion(req, res) {
     const schoolId = req.user.schoolId;
     const { subjectId, topicId, type, text, options, answer, explanation, marks, difficulty, tags } = req.body;
 
+    const isValidTopic = topicId && mongoose.Types.ObjectId.isValid(topicId);
+
     const question = await Question.create({
       subjectId,
-      topicId: topicId || null,
+      topicId: isValidTopic ? topicId : null,
       type: type || 'mcq',
       text,
       options: options || [],
@@ -798,9 +841,11 @@ async function createTeacherLesson(req, res) {
     const schoolId = req.user.schoolId;
     const { subjectId, topicId, title, content, files, links, status, order } = req.body;
 
+    const isValidTopic = topicId && mongoose.Types.ObjectId.isValid(topicId);
+
     const lesson = await Lesson.create({
       subjectId,
-      topicId,
+      topicId: isValidTopic ? topicId : null,
       title,
       content: content || '',
       files: files || [],
@@ -1034,17 +1079,24 @@ async function handleSmartAssignmentEstimate(req, res) {
     }
 
     // Step A: Coded Context & Pedagogical Gemini Estimation
-    const systemInstruction = `You are a certified educational workload analyst and pedagogy specialist for secondary schools.
-Your role is to estimate realistic completion time for homework assignments for ${className} students.
-Coded Pedagogical Context & Guidelines:
-- Target Grade: ${className} (Age 15-16, secondary curriculum standard).
-- Technical reading speed: ~150 words per minute.
-- Basic concept recall / direct questions: 3 to 5 minutes each.
-- Multi-step calculation / problem solving (Maths/Physics/Chemistry): 6 to 10 minutes per problem.
-- Long analytical / essay / source-based questions: 15 to 25 minutes each.
-- Review & self-check: ~5 minutes.
-- Maximum recommended total homework across ALL subjects combined per day is 90 minutes.
-Be realistic, objective, and account for the cognitive effort needed for drafting, problem-solving, and proofreading.`;
+    const systemInstruction = `You are a certified educational workload analyst and secondary school pedagogy specialist (CBSE / Indian Secondary Standards).
+Your role is to estimate realistic student completion time for homework assignments for ${className} (Age 15-16), ensure assignments respect the 90-minute daily homework ceiling, and flag excessively large homework that should be distributed across multiple days.
+
+Pedagogical Workload Standards:
+1. Daily Ceiling: Maximum recommended homework across ALL subjects combined per day is strictly 90 minutes.
+2. Single-Subject Limit: A single assignment should ideally take 25 to 45 minutes, and must NOT exceed 60 minutes for a single night.
+3. Realistic Problem Pacing:
+   - Reading instructions/theory: 150 words/min.
+   - Basic recall / short questions: 3 to 5 minutes each.
+   - Multi-step calculations / proofs / geometry / word problems: 7 to 10 minutes per problem.
+   - Long analytical / essay / lab reports / research projects: 20 to 35 minutes.
+   - Solution verification & neat drafting: ~5 minutes.
+4. Excessive Homework Detection:
+   - If an assignment takes > 60 minutes or has more than 5-6 demanding multi-step problems, set isTooLarge: true.
+   - largeWarning: "This single assignment (~X mins) exceeds the recommended 60-minute single-subject ceiling and will cause student fatigue."
+   - splitSuggestion: "Recommendation: Split this assignment into 2 balanced parts (e.g. Part 1 due Thursday, Part 2 due Monday) to ensure students can absorb concepts without cognitive overload."
+   - recommendedParts: array of 2 parts detailing how to split it.
+   - If estimatedMinutes <= 60, set isTooLarge: false, largeWarning: null, splitSuggestion: null, recommendedParts: [].`;
 
     const prompt = `Analyze this school assignment and estimate completion time in minutes for ${className} students:
 Subject: ${subjectName}
@@ -1054,14 +1106,16 @@ Assignment Content & Questions:
 ${description || title}
 """
 
-Provide a structured estimation with:
-- estimatedMinutes: realistic completion time integer between 15 and 90
-- difficultyLevel: "Light" (15-30m), "Moderate" (35-55m), or "Challenging" (60-90m)
-- readingMinutes: time to read theory and questions
-- solvingMinutes: time to draft answers and calculate
-- reviewMinutes: time to review and format
-- rationale: 2-3 sentences explaining the breakdown based on question count, difficulty, and cognitive demand
-- pacingAdvice: a clear recommendation for the student on how to tackle this assignment effectively`;
+Evaluate:
+- estimatedMinutes: realistic completion time integer (15 to 120)
+- difficultyLevel: "Light" (15-30m), "Moderate" (35-55m), or "Challenging" (60m+)
+- readingMinutes, solvingMinutes, reviewMinutes
+- rationale: clear 2-3 sentences explaining the time calculation based on problem count, steps, and cognitive depth
+- pacingAdvice: advice for the student
+- isTooLarge: true if estimatedMinutes > 60 or questions are excessive for one night
+- largeWarning: warning message if isTooLarge
+- splitSuggestion: actionable advice on how to split this into 2 parts
+- recommendedParts: array of 2 parts if isTooLarge`;
 
     let estimationData;
     try {
@@ -1078,16 +1132,26 @@ Provide a structured estimation with:
       estimationData = aiRes.data;
     } catch (aiErr) {
       console.warn('AI estimate error, using rule-based fallback:', aiErr.message);
-      const wordCount = ((description || '') + ' ' + title).split(/\s+/).length;
-      const baseMinutes = Math.min(90, Math.max(25, Math.round(wordCount * 0.4) + 20));
+      const text = (description || '') + ' ' + title;
+      const wordCount = text.split(/\s+/).length;
+      const questionCount = (text.match(/(?:^|\n|\s)(?:\d+[\.\)]|[a-zA-Z][\.\)]|\bQ\d+)/g) || []).length;
+      const baseMinutes = Math.min(120, Math.max(25, Math.round(wordCount * 0.4) + Math.max(1, questionCount) * 8 + 10));
+      const isTooLarge = baseMinutes > 60;
       estimationData = {
         estimatedMinutes: baseMinutes,
         difficultyLevel: baseMinutes > 55 ? 'Challenging' : baseMinutes > 35 ? 'Moderate' : 'Light',
         readingMinutes: Math.round(baseMinutes * 0.2),
         solvingMinutes: Math.round(baseMinutes * 0.7),
         reviewMinutes: Math.max(5, Math.round(baseMinutes * 0.1)),
-        rationale: `Estimated based on pedagogical rubric for ${className} ${subjectName} assignments (~${wordCount} words).`,
-        pacingAdvice: 'Complete during a single focused evening study session.',
+        rationale: `Estimated based on pedagogical rubric for ${className} ${subjectName} assignments (~${wordCount} words, ~${Math.max(1, questionCount)} problems).`,
+        pacingAdvice: isTooLarge ? 'Split across 2 study sessions to prevent fatigue.' : 'Complete during a single focused evening study session.',
+        isTooLarge,
+        largeWarning: isTooLarge ? `This single assignment (~${baseMinutes} mins) exceeds the recommended 60-minute single-subject ceiling and will cause student fatigue.` : undefined,
+        splitSuggestion: isTooLarge ? `Recommendation: Split into 2 parts — Part 1 (~${Math.round(baseMinutes * 0.5)} mins) for core concepts, and Part 2 (~${Math.round(baseMinutes * 0.5)} mins) for advanced application problems.` : undefined,
+        recommendedParts: isTooLarge ? [
+          { partNumber: 1, title: `${title} - Part 1: Core Practice`, scope: 'Foundation problems & standard questions', estimatedMinutes: Math.round(baseMinutes * 0.5) },
+          { partNumber: 2, title: `${title} - Part 2: Advanced Applications`, scope: 'Complex word problems & higher-order thinking', estimatedMinutes: Math.round(baseMinutes * 0.5) },
+        ] : [],
       };
     }
 

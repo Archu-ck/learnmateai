@@ -67,6 +67,15 @@ export default function CreateAssignmentPage() {
       reviewMinutes: number;
       rationale: string;
       pacingAdvice: string;
+      isTooLarge?: boolean;
+      largeWarning?: string;
+      splitSuggestion?: string;
+      recommendedParts?: Array<{
+        partNumber: number;
+        title: string;
+        scope: string;
+        estimatedMinutes: number;
+      }>;
     };
     workload: {
       isOverloaded: boolean;
@@ -116,21 +125,26 @@ export default function CreateAssignmentPage() {
   // Load topics when selected class changes
   const activeClass = classes[selectedClassIndex];
   useEffect(() => {
-    if (!activeClass?.subjectId) return;
+    if (!activeClass) return;
     async function loadTopics() {
       try {
-        const res = await api.get<any>(`/api/teacher/classes`);
-        // Find syllabus topics for this subject
-        setTopics([
-          { id: "top-1", name: "Chapter 1: Real Numbers & Polynomials" },
-          { id: "top-2", name: "Chapter 2: Quadratic Equations & Roots" },
-          { id: "top-3", name: "Chapter 3: Arithmetic Progressions" },
-          { id: "top-4", name: "Chapter 4: Triangles & Coordinate Geometry" },
-          { id: "top-5", name: "Chapter 5: Trigonometry & Applications" },
-        ]);
-        setSelectedTopicId("top-2");
+        const workspaceId = (activeClass as any).id || activeClass.classId;
+        const res = await api.get<any>(`/api/teacher/classes/${workspaceId}`);
+        if (res.topics && res.topics.length > 0) {
+          setTopics(
+            res.topics.map((t: any) => ({
+              id: t.id || t._id,
+              name: t.name || t.title,
+            }))
+          );
+          setSelectedTopicId(res.topics[0].id || res.topics[0]._id);
+        } else {
+          setTopics([]);
+          setSelectedTopicId("");
+        }
       } catch (e) {
-        // fallback
+        setTopics([]);
+        setSelectedTopicId("");
       }
     }
     loadTopics();
@@ -211,12 +225,18 @@ export default function CreateAssignmentPage() {
       setSaving(true);
       const dueDateTime = new Date(`${dueDateString}T${dueTimeString}:00`);
 
+      // Ensure topicId is a valid 24-character hex ObjectId or null
+      const validTopicId =
+        selectedTopicId && /^[0-9a-fA-F]{24}$/.test(selectedTopicId)
+          ? selectedTopicId
+          : null;
+
       await api.post("/api/teacher/assignments", {
         title: title.trim(),
         classId: activeClass.classId,
         section: activeClass.section,
         subjectId: activeClass.subjectId,
-        topicId: selectedTopicId || null,
+        topicId: validTopicId,
         description: description.trim(),
         dueDate: dueDateTime.toISOString(),
         totalMarks: Number(totalMarks) || 20,
@@ -501,6 +521,78 @@ export default function CreateAssignmentPage() {
                       {analysisResult.workload.combinedTargetMinutes} mins, well within the 90-minute limit.
                     </p>
                   </div>
+                </div>
+              )}
+
+              {/* Single Assignment Too Large Alert */}
+              {analysisResult.estimation.isTooLarge && (
+                <div className="p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-500/60 shadow-sm space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-amber-600 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                      <AlertTriangle size={18} />
+                    </div>
+                    <div className="space-y-1 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-xs font-black text-amber-950 uppercase tracking-wider">
+                          Assignment Length Warning — Excessive Homework (&gt; 60 Minutes)
+                        </h4>
+                        <span className="neu-pill text-[9px] font-black uppercase text-white bg-amber-600 px-2 py-0.2">
+                          Fatigue Risk
+                        </span>
+                      </div>
+                      <p className="text-xs text-amber-900 font-medium leading-relaxed">
+                        {analysisResult.estimation.largeWarning ||
+                          "This single homework assignment is estimated to take over 60 minutes, which exceeds the healthy single-session cognitive threshold."}
+                      </p>
+                      {analysisResult.estimation.splitSuggestion && (
+                        <p className="text-xs text-amber-950 font-bold mt-1">
+                          💡 {analysisResult.estimation.splitSuggestion}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {analysisResult.estimation.recommendedParts &&
+                    analysisResult.estimation.recommendedParts.length > 0 && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                        {analysisResult.estimation.recommendedParts.map((part) => (
+                          <div
+                            key={part.partNumber}
+                            className="neu-card p-3.5 bg-white/95 space-y-2 flex flex-col justify-between rounded-xl"
+                          >
+                            <div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-black uppercase text-indigo-600">
+                                  Part {part.partNumber}
+                                </span>
+                                <span className="neu-pill text-[9px] font-extrabold text-slate-700 bg-slate-100 px-2 py-0.2">
+                                  ~{part.estimatedMinutes} mins
+                                </span>
+                              </div>
+                              <h5 className="text-xs font-extrabold text-slate-800 mt-1">
+                                {part.title}
+                              </h5>
+                              <p className="text-[11px] text-slate-600 font-medium leading-normal">
+                                {part.scope}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setTitle(part.title);
+                                toast(
+                                  `Updated assignment scope to "${part.title}"! Schedule Part 2 for a later day.`,
+                                  "success"
+                                );
+                              }}
+                              className="neu-btn px-3 py-1.5 text-[11px] font-bold rounded-lg text-indigo-700 hover:text-indigo-900 w-full cursor-pointer text-center"
+                            >
+                              Adopt Part {part.partNumber} Scope
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                 </div>
               )}
 

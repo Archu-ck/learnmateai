@@ -37,7 +37,9 @@ export default function CreateAssignmentPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const [classes, setClasses] = useState<TeacherClassOption[]>([]);
+  const [classes, setClasses] = useState<TeacherClassOption[]>(() => {
+    return api.getCached<{ classes: TeacherClassOption[] }>("/api/teacher/classes")?.classes || [];
+  });
   const [selectedClassIndex, setSelectedClassIndex] = useState<number>(0);
   const [topics, setTopics] = useState<TopicOption[]>([]);
   const [selectedTopicId, setSelectedTopicId] = useState<string>("");

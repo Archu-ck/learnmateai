@@ -35,28 +35,52 @@ export default function StudentAskAIPage() {
   const initialQuery = searchParams.get("question") || "";
   const initialSubId = searchParams.get("subjectId") || "";
 
-  const [subjects, setSubjects] = useState<SubjectSummary[]>([]);
-  const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
-  const [subjectTopics, setSubjectTopics] = useState<TopicItem[]>([]);
-  const [loadingSubjects, setLoadingSubjects] = useState<boolean>(true);
+  const [subjects, setSubjects] = useState<SubjectSummary[]>(() => {
+    return api.getCached<{ subjects: SubjectSummary[] }>("/api/student/subjects")?.subjects || [];
+  });
+
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>(() => {
+    const cached = api.getCached<{ subjects: SubjectSummary[] }>("/api/student/subjects")?.subjects || [];
+    if (cached.length > 0) {
+      const matched = initialSubId ? cached.find((s) => s.id === initialSubId) : null;
+      return matched ? matched.id : cached[0].id;
+    }
+    return "";
+  });
+
+  const [subjectTopics, setSubjectTopics] = useState<TopicItem[]>(() => {
+    const subId = selectedSubjectId || (subjects.length > 0 ? subjects[0].id : "");
+    if (!subId) return [];
+    const cached = api.getCached<{ subject: any; topics: any[] }>(`/api/student/subjects/${subId}`);
+    return (cached?.topics || []).map((t: any) => ({
+      id: t._id || t.id,
+      name: t.name || t.title,
+      chapterNumber: t.chapterNumber,
+    }));
+  });
+
+  const [loadingSubjects, setLoadingSubjects] = useState<boolean>(() => {
+    return subjects.length === 0;
+  });
   const [loadingTopics, setLoadingTopics] = useState<boolean>(false);
 
   // Load all enrolled subjects for the student
   useEffect(() => {
+    const hasCached = subjects.length > 0;
     async function loadSubjects() {
       try {
-        setLoadingSubjects(true);
+        if (!hasCached) setLoadingSubjects(true);
         const res = await api.get<{ subjects: SubjectSummary[] }>("/api/student/subjects");
         const subs = res.subjects || [];
         setSubjects(subs);
 
-        if (subs.length > 0) {
+        if (subs.length > 0 && !selectedSubjectId) {
           const matched = initialSubId ? subs.find((s) => s.id === initialSubId) : null;
           const chosen = matched ? matched.id : subs[0].id;
           setSelectedSubjectId(chosen);
         }
       } catch (err: any) {
-        toast(err.message || "Failed to load subjects", "error");
+        if (!hasCached) toast(err.message || "Failed to load subjects", "error");
       } finally {
         setLoadingSubjects(false);
       }
@@ -67,12 +91,25 @@ export default function StudentAskAIPage() {
   // Load topics whenever selectedSubjectId changes
   useEffect(() => {
     if (!selectedSubjectId) return;
+
+    const topicUrl = `/api/student/subjects/${selectedSubjectId}`;
+    const cached = api.getCached<{ subject: any; topics: any[] }>(topicUrl);
+    if (cached?.topics) {
+      setSubjectTopics(
+        cached.topics.map((t: any) => ({
+          id: t._id || t.id,
+          name: t.name || t.title,
+          chapterNumber: t.chapterNumber,
+        }))
+      );
+    }
+
+    const hasCachedTopics = !!cached?.topics?.length;
+
     async function loadTopics() {
       try {
-        setLoadingTopics(true);
-        const res = await api.get<{ subject: any; topics: any[] }>(
-          `/api/student/subjects/${selectedSubjectId}`
-        );
+        if (!hasCachedTopics) setLoadingTopics(true);
+        const res = await api.get<{ subject: any; topics: any[] }>(topicUrl);
         const topics = (res.topics || []).map((t) => ({
           id: t._id || t.id,
           name: t.name || t.title,
@@ -81,7 +118,7 @@ export default function StudentAskAIPage() {
         setSubjectTopics(topics);
       } catch (err: any) {
         // Fallback gracefully
-        setSubjectTopics([]);
+        if (!hasCachedTopics) setSubjectTopics([]);
       } finally {
         setLoadingTopics(false);
       }

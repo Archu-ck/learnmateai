@@ -33,12 +33,32 @@ interface ChatThreadItem {
 export default function StudentChatInboxPage() {
   const { toast } = useToast();
 
-  const [threads, setThreads] = useState<ChatThreadItem[]>([]);
-  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
-  const [activeThread, setActiveThread] = useState<ChatThreadItem | null>(null);
-  const [messages, setMessages] = useState<any[]>([]);
+  const [threads, setThreads] = useState<ChatThreadItem[]>(() => {
+    return api.getCached<{ threads: ChatThreadItem[] }>("/api/chat/threads")?.threads || [];
+  });
 
-  const [loadingThreads, setLoadingThreads] = useState(true);
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(() => {
+    const cached = api.getCached<{ threads: ChatThreadItem[] }>("/api/chat/threads")?.threads || [];
+    return cached.length > 0 ? cached[0]._id : null;
+  });
+
+  const [activeThread, setActiveThread] = useState<ChatThreadItem | null>(() => {
+    const cached = api.getCached<{ threads: ChatThreadItem[] }>("/api/chat/threads")?.threads || [];
+    return cached.length > 0 ? cached[0] : null;
+  });
+
+  const [messages, setMessages] = useState<any[]>(() => {
+    const cachedThreads = api.getCached<{ threads: ChatThreadItem[] }>("/api/chat/threads")?.threads || [];
+    if (cachedThreads.length > 0) {
+      const firstId = cachedThreads[0]._id;
+      return api.getCached<{ messages: any[] }>(`/api/chat/thread?threadId=${firstId}`)?.messages || [];
+    }
+    return [];
+  });
+
+  const [loadingThreads, setLoadingThreads] = useState<boolean>(() => {
+    return threads.length === 0;
+  });
   const [loadingMessages, setLoadingMessages] = useState(false);
 
   // Filters & Search
@@ -51,12 +71,15 @@ export default function StudentChatInboxPage() {
   const [sendingMessage, setSendingMessage] = useState(false);
 
   // Chat Hours Status
-  const [chatSettings, setChatSettings] = useState<{ isOpen: boolean; setting: any } | null>(null);
+  const [chatSettings, setChatSettings] = useState<{ isOpen: boolean; setting: any } | null>(() => {
+    return api.getCached<{ isOpen: boolean; setting: any }>("/api/chat/settings") || null;
+  });
 
   // Load All Student Threads
   const loadThreads = async () => {
+    const hasCached = threads.length > 0;
     try {
-      setLoadingThreads(true);
+      if (!hasCached) setLoadingThreads(true);
       const [threadsRes, settingsRes] = await Promise.all([
         api.get<{ threads: ChatThreadItem[] }>("/api/chat/threads"),
         api.get<{ isOpen: boolean; setting: any }>("/api/chat/settings"),
@@ -69,7 +92,7 @@ export default function StudentChatInboxPage() {
         setActiveThread(threadsRes.threads[0]);
       }
     } catch (err: any) {
-      toast(err.message || "Failed to load chat inbox", "error");
+      if (!hasCached) toast(err.message || "Failed to load chat inbox", "error");
     } finally {
       setLoadingThreads(false);
     }

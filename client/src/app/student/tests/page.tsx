@@ -34,18 +34,22 @@ interface TestItem {
 
 export default function StudentTestsPage() {
   const { toast } = useToast();
-  const [tests, setTests] = useState<TestItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [tests, setTests] = useState<TestItem[]>(() => {
+    const cached = api.getCached<{ tests: TestItem[] }>("/api/student/tests");
+    return cached?.tests || [];
+  });
+  const [loading, setLoading] = useState<boolean>(() => !api.getCached("/api/student/tests"));
   const [tabFilter, setTabFilter] = useState<"all" | "available" | "completed">("all");
 
   useEffect(() => {
+    const hasCached = !!api.getCached("/api/student/tests");
     const fetchTests = async () => {
       try {
-        setLoading(true);
+        if (!hasCached) setLoading(true);
         const res = await api.get<{ tests: TestItem[] }>("/api/student/tests");
         setTests(res.tests || []);
       } catch (err: any) {
-        toast(err.message || "Failed to load tests", "error");
+        if (!hasCached) toast(err.message || "Failed to load tests", "error");
       } finally {
         setLoading(false);
       }

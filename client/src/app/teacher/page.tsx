@@ -63,23 +63,28 @@ interface TeacherDashboardData {
 
 export default function TeacherDashboardPage() {
   const { toast } = useToast();
-  const [data, setData] = useState<TeacherDashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<TeacherDashboardData | null>(() =>
+    api.getCached<TeacherDashboardData>("/api/teacher/dashboard")
+  );
+  const [loading, setLoading] = useState<boolean>(
+    () => !api.getCached("/api/teacher/dashboard")
+  );
 
-  const loadDashboard = async () => {
+  const loadDashboard = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await api.get<TeacherDashboardData>("/api/teacher/dashboard");
       setData(res);
     } catch (err: any) {
-      toast(err.message || "Failed to load teacher dashboard", "error");
+      if (!silent) toast(err.message || "Failed to load teacher dashboard", "error");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadDashboard();
+    const hasCached = !!api.getCached("/api/teacher/dashboard");
+    loadDashboard(hasCached);
   }, []);
 
   const todayDateString = new Date().toLocaleDateString("en-US", {

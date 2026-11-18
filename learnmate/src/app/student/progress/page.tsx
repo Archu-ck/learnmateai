@@ -45,8 +45,10 @@ interface ProgressData {
 
 export default function StudentProgressPage() {
   const { toast } = useToast();
-  const [data, setData] = useState<ProgressData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<ProgressData | null>(() =>
+    api.getCached<ProgressData>("/api/student/progress")
+  );
+  const [loading, setLoading] = useState<boolean>(() => !api.getCached("/api/student/progress"));
   const [practiceModalOpen, setPracticeModalOpen] = useState(false);
   const [selectedPracticeTopic, setSelectedPracticeTopic] = useState<{
     subjectId: string;
@@ -56,13 +58,14 @@ export default function StudentProgressPage() {
   } | null>(null);
 
   useEffect(() => {
+    const hasCached = !!api.getCached("/api/student/progress");
     const fetchProgress = async () => {
       try {
-        setLoading(true);
+        if (!hasCached) setLoading(true);
         const res = await api.get<ProgressData>("/api/student/progress");
         setData(res);
       } catch (err: any) {
-        toast(err.message || "Failed to load progress analytics", "error");
+        if (!hasCached) toast(err.message || "Failed to load progress analytics", "error");
       } finally {
         setLoading(false);
       }

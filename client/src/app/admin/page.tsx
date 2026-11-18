@@ -36,8 +36,10 @@ interface DashboardStats {
 }
 
 export default function AdminDashboardPage() {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<DashboardStats | null>(() =>
+    api.getCached<DashboardStats>("/api/admin/stats")
+  );
+  const [loading, setLoading] = useState<boolean>(() => !api.getCached("/api/admin/stats"));
 
   // AI Stats Assistant State
   const [qaQuestion, setQaQuestion] = useState("");
@@ -60,8 +62,9 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const fetchStats = async () => {
+  const fetchStats = async (silent = false) => {
     try {
+      if (!silent) setLoading(true);
       const res = await api.get<DashboardStats>("/api/admin/stats");
       setStats(res);
     } catch (err) {
@@ -72,7 +75,8 @@ export default function AdminDashboardPage() {
   };
 
   useEffect(() => {
-    fetchStats();
+    const hasCached = !!api.getCached("/api/admin/stats");
+    fetchStats(hasCached);
   }, []);
 
   if (loading) {

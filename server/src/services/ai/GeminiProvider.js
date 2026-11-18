@@ -4,8 +4,9 @@ class GeminiProvider {
   constructor(apiKey = process.env.GEMINI_API_KEY, modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash') {
     this.apiKey = apiKey;
     this.modelName = modelName;
+    this.apiVersion = process.env.GEMINI_API_VERSION || 'v1beta';
     if (this.apiKey) {
-      this.ai = new GoogleGenAI({ apiKey: this.apiKey });
+      this.ai = new GoogleGenAI({ apiKey: this.apiKey, apiVersion: this.apiVersion });
     }
   }
 
@@ -16,7 +17,8 @@ class GeminiProvider {
         throw new Error('GEMINI_API_KEY is not configured in .env. Please add your Gemini API key or switch AI_PROVIDER=mock.');
       }
       this.apiKey = key;
-      this.ai = new GoogleGenAI({ apiKey: key });
+      this.apiVersion = process.env.GEMINI_API_VERSION || 'v1beta';
+      this.ai = new GoogleGenAI({ apiKey: key, apiVersion: this.apiVersion });
     }
     return this.ai;
   }

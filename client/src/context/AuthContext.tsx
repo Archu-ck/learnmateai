@@ -48,6 +48,62 @@ export function getRolePath(role: string): string {
   }
 }
 
+export function prefetchRoleData(role: string) {
+  if (typeof window === "undefined" || !role) return;
+
+  const roleEndpoints: Record<string, string[]> = {
+    student: [
+      "/api/student/dashboard",
+      "/api/student/subjects",
+      "/api/student/assignments",
+      "/api/student/tests",
+      "/api/student/planner",
+      "/api/student/progress",
+      "/api/student/attendance",
+      "/api/notifications",
+    ],
+    teacher: [
+      "/api/teacher/dashboard",
+      "/api/teacher/classes",
+      "/api/teacher/workload",
+      "/api/notifications",
+    ],
+    parent: [
+      "/api/parent/dashboard",
+      "/api/student/progress",
+      "/api/student/attendance",
+      "/api/notifications",
+    ],
+    principal: [
+      "/api/principal/dashboard",
+      "/api/admin/classes",
+      "/api/admin/subject-allocation",
+      "/api/admin/audit",
+      "/api/notifications",
+    ],
+    admin: [
+      "/api/admin/stats",
+      "/api/admin/dashboard",
+      "/api/admin/users?page=1&limit=10",
+      "/api/admin/classes",
+      "/api/admin/subjects",
+      "/api/admin/parents",
+      "/api/admin/roles",
+      "/api/notifications",
+    ],
+  };
+
+  const endpoints = roleEndpoints[role] || [];
+  if (endpoints.length > 0) {
+    const trigger = () => api.prefetch(endpoints);
+    if ("requestIdleCallback" in window) {
+      (window as any).requestIdleCallback(trigger);
+    } else {
+      setTimeout(trigger, 150);
+    }
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [permissions, setPermissions] = useState<string[]>([]);
@@ -60,6 +116,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await api.get<{ user: User; permissions: string[] }>("/api/auth/me");
       setUser(res.user);
       setPermissions(res.permissions || []);
+      if (res.user?.role) {
+        prefetchRoleData(res.user.role);
+      }
       return res.user;
     } catch (err: any) {
       setUser(null);
@@ -82,6 +141,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(res.user);
     setPermissions(res.permissions || []);
 
+    if (res.user?.role) {
+      prefetchRoleData(res.user.role);
+    }
+
     if (res.user.mustChangePassword) {
       router.push("/change-password");
     } else {
@@ -97,6 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       // Continue even if call fails
     }
+    api.clearCache();
     setUser(null);
     setPermissions([]);
     router.push("/login");

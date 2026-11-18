@@ -28,8 +28,11 @@ interface StudyBlockItem {
 
 export default function StudentStudyPlannerPage() {
   const { toast } = useToast();
-  const [blocks, setBlocks] = useState<StudyBlockItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [blocks, setBlocks] = useState<StudyBlockItem[]>(() => {
+    const cached = api.getCached<{ blocks: StudyBlockItem[] }>("/api/student/planner");
+    return cached?.blocks || [];
+  });
+  const [loading, setLoading] = useState<boolean>(() => !api.getCached("/api/student/planner"));
 
   // New Block Modal
   const [showAddModal, setShowAddModal] = useState(false);
@@ -47,20 +50,21 @@ export default function StudentStudyPlannerPage() {
 
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-  const loadPlanner = async () => {
+  const loadPlanner = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await api.get<{ blocks: StudyBlockItem[] }>("/api/student/planner");
       setBlocks(res.blocks || []);
     } catch (err: any) {
-      toast(err.message || "Failed to load study blocks", "error");
+      if (!silent) toast(err.message || "Failed to load study planner", "error");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadPlanner();
+    const hasCached = !!api.getCached("/api/student/planner");
+    loadPlanner(hasCached);
   }, []);
 
   // Add block

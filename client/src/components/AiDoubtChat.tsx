@@ -47,11 +47,13 @@ export default function AiDoubtChat({
   subjectName,
   topics = [],
   initialQuestion = "",
+  containerClassName,
 }: {
   subjectId: string;
   subjectName: string;
   topics?: TopicOption[];
   initialQuestion?: string;
+  containerClassName?: string;
 }) {
   const { toast } = useToast();
 
@@ -304,7 +306,12 @@ export default function AiDoubtChat({
   );
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 h-[calc(100vh-220px)] min-h-[500px] max-h-[700px] w-full">
+    <div
+      className={
+        containerClassName ||
+        "grid grid-cols-1 lg:grid-cols-12 gap-5 h-[calc(100vh-270px)] min-h-[460px] max-h-[640px] w-full"
+      }
+    >
       {/* LEFT COLUMN: Discussions Drawer */}
       <div className="lg:col-span-4 neu-card p-4 sm:p-5 flex flex-col h-full min-h-0 overflow-hidden">
         <div className="space-y-3 flex-1 min-h-0 flex flex-col overflow-hidden">

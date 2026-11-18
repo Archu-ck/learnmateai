@@ -22,8 +22,15 @@ interface AttendanceRecord {
 
 export default function StudentAttendancePage() {
   const { toast } = useToast();
-  const [records, setRecords] = useState<AttendanceRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [records, setRecords] = useState<AttendanceRecord[]>(() => {
+    const cached = api.getCached<{ attendanceRecords: AttendanceRecord[] }>(
+      "/api/student/attendance"
+    );
+    return cached?.attendanceRecords || [];
+  });
+  const [loading, setLoading] = useState<boolean>(
+    () => !api.getCached("/api/student/attendance")
+  );
 
   // Current view month (November 2026 default)
   const [currentYear, setCurrentYear] = useState(2026);
@@ -35,15 +42,16 @@ export default function StudentAttendancePage() {
   ];
 
   useEffect(() => {
+    const hasCached = !!api.getCached("/api/student/attendance");
     const fetchAttendance = async () => {
       try {
-        setLoading(true);
+        if (!hasCached) setLoading(true);
         const res = await api.get<{ attendanceRecords: AttendanceRecord[] }>(
           "/api/student/attendance"
         );
         setRecords(res.attendanceRecords || []);
       } catch (err: any) {
-        toast(err.message || "Failed to load attendance records", "error");
+        if (!hasCached) toast(err.message || "Failed to load attendance records", "error");
       } finally {
         setLoading(false);
       }

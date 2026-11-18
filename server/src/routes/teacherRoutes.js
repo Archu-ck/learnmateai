@@ -16,6 +16,9 @@ const {
   createTeacherLesson,
   markAttendance,
   getTeacherDashboard,
+  handleSmartAssignmentEstimate,
+  getTeacherWorkloadCalendar,
+  getTeacherAssignments,
 } = require('../controllers/teacherController');
 
 router.use(requireAuth);
@@ -28,11 +31,14 @@ router.get('/dashboard', getTeacherDashboard);
 router.get('/classes', getMyClasses);
 router.get('/classes/:id', getClassWorkspace);
 
-// Workload Check
+// Workload Check & Calendar
 router.get('/workload', getWorkloadCheck);
+router.get('/workload/calendar', getTeacherWorkloadCalendar);
 
-// Assignments & Grading
+// Assignments & Grading & Smart AI Estimator
+router.get('/assignments', getTeacherAssignments);
 router.post('/assignments', createTeacherAssignment);
+router.post('/assignments/smart-estimate', handleSmartAssignmentEstimate);
 router.get('/assignments/:id/submissions', getAssignmentSubmissions);
 router.post('/submissions/:id/grade', gradeStudentSubmission);
 

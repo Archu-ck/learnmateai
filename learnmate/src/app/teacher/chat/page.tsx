@@ -204,9 +204,9 @@ export default function TeacherChatInboxPage() {
   const totalUnread = threads.reduce((acc, t) => acc + (t.unreadTeacherCount || 0), 0);
 
   return (
-    <div className="h-[calc(100vh-115px)] flex flex-col w-full pb-1 font-sans">
+    <div className="h-full flex flex-col w-full font-sans min-h-0 overflow-hidden">
       {/* Top Header Bar */}
-      <div className="neu-card px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 mb-4">
+      <div className="neu-card px-6 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 mb-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/25">
             <MessageSquare size={20} />

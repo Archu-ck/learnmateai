@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { api } from "@/lib/api";
 import {
   LayoutDashboard,
   FileText,
@@ -34,6 +35,7 @@ type NavItem = {
 const navByRole: Record<string, NavItem[]> = {
   student: [
     { label: "Dashboard", href: "/student", icon: <LayoutDashboard size={19} /> },
+    { label: "Ask AI", href: "/student/ask-ai", icon: <Bot size={19} /> },
     { label: "My Subjects", href: "/student/subjects", icon: <BookOpen size={19} /> },
     { label: "Chat Inbox", href: "/student/chat", icon: <MessageSquare size={19} /> },
     { label: "Assignments", href: "/student/assignments", icon: <FileText size={19} /> },
@@ -44,6 +46,8 @@ const navByRole: Record<string, NavItem[]> = {
   ],
   teacher: [
     { label: "Dashboard", href: "/teacher", icon: <LayoutDashboard size={19} /> },
+    { label: "Create Assignment", href: "/teacher/assignments/create", icon: <FileText size={19} /> },
+    { label: "Smart Assignment Manager", href: "/teacher/assignments", icon: <Sparkles size={19} /> },
     { label: "My Classes", href: "/teacher/classes", icon: <BookOpen size={19} /> },
     { label: "Chat Inbox", href: "/teacher/chat", icon: <MessageSquare size={19} /> },
   ],
@@ -80,6 +84,28 @@ const allRoles = [
   { key: "admin", label: "Admin Portal", href: "/admin", desc: "System Administrator • System Config" },
 ];
 
+const routeApiMap: Record<string, string[]> = {
+  "/student": ["/api/student/dashboard"],
+  "/student/subjects": ["/api/student/subjects"],
+  "/student/assignments": ["/api/student/assignments"],
+  "/student/tests": ["/api/student/tests"],
+  "/student/planner": ["/api/student/planner"],
+  "/student/progress": ["/api/student/progress"],
+  "/student/attendance": ["/api/student/attendance"],
+  "/teacher": ["/api/teacher/dashboard"],
+  "/teacher/classes": ["/api/teacher/classes"],
+  "/parent": ["/api/parent/dashboard"],
+  "/principal": ["/api/principal/dashboard", "/api/admin/classes"],
+  "/admin": ["/api/admin/stats", "/api/admin/dashboard"],
+  "/admin/users": ["/api/admin/users?page=1&limit=10"],
+  "/admin/classes": ["/api/admin/classes"],
+  "/admin/subjects": ["/api/admin/subjects"],
+  "/admin/subject-allocation": ["/api/admin/subject-allocation"],
+  "/admin/parents": ["/api/admin/parents"],
+  "/admin/roles": ["/api/admin/roles"],
+  "/admin/audit": ["/api/admin/audit"],
+};
+
 function NavList({
   role,
   onItemClick,
@@ -89,6 +115,13 @@ function NavList({
 }) {
   const pathname = usePathname();
   const items = navByRole[role] || [];
+
+  const handleHover = (href: string) => {
+    const endpoints = routeApiMap[href];
+    if (endpoints && endpoints.length > 0) {
+      api.prefetch(endpoints);
+    }
+  };
 
   return (
     <ul className="space-y-2.5">
@@ -102,6 +135,7 @@ function NavList({
             <Link
               href={item.href}
               onClick={onItemClick}
+              onMouseEnter={() => handleHover(item.href)}
               className={`flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-bold transition-all duration-200 ${
                 isActive
                   ? "bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/30 translate-x-1"
@@ -112,6 +146,16 @@ function NavList({
                 {item.icon}
               </span>
               <span>{item.label}</span>
+              {item.label === "Ask AI" && !isActive && (
+                <span className="ml-auto px-1.5 py-0.5 rounded-md bg-gradient-to-r from-indigo-500 to-violet-600 text-[9px] font-black text-white shadow-xs">
+                  AI
+                </span>
+              )}
+              {item.label === "Smart Assignment Manager" && !isActive && (
+                <span className="ml-auto px-1.5 py-0.5 rounded-md bg-amber-500 text-[9px] font-black text-white shadow-xs">
+                  AI
+                </span>
+              )}
               {isActive && (
                 <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
               )}

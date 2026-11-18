@@ -31,19 +31,23 @@ interface SubjectSummary {
 
 export default function StudentSubjectsPage() {
   const { toast } = useToast();
-  const [subjects, setSubjects] = useState<SubjectSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [subjects, setSubjects] = useState<SubjectSummary[]>(() => {
+    const cached = api.getCached<{ subjects: SubjectSummary[] }>("/api/student/subjects");
+    return cached?.subjects || [];
+  });
+  const [loading, setLoading] = useState<boolean>(() => !api.getCached("/api/student/subjects"));
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<"ALL" | "compulsory" | "elective">("ALL");
 
   useEffect(() => {
+    const hasCached = !!api.getCached("/api/student/subjects");
     const fetchSubjects = async () => {
       try {
-        setLoading(true);
+        if (!hasCached) setLoading(true);
         const res = await api.get<{ subjects: SubjectSummary[] }>("/api/student/subjects");
         setSubjects(res.subjects || []);
       } catch (err: any) {
-        toast(err.message || "Failed to load enrolled subjects", "error");
+        if (!hasCached) toast(err.message || "Failed to load enrolled subjects", "error");
       } finally {
         setLoading(false);
       }

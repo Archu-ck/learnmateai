@@ -16,6 +16,40 @@ const TimetableEntry = require('../models/TimetableEntry');
 const ChatThread = require('../models/ChatThread');
 const ChatMessage = require('../models/ChatMessage');
 const Announcement = require('../models/Announcement');
+const { z } = require('zod');
+const { executeJSON } = require('../services/ai/aiExecutor');
+
+const SmartAssignmentEstimateSchema = z.object({
+  estimatedMinutes: z.number(),
+  difficultyLevel: z.string(),
+  readingMinutes: z.number(),
+  solvingMinutes: z.number(),
+  reviewMinutes: z.number(),
+  rationale: z.string(),
+  pacingAdvice: z.string(),
+});
+
+const GeminiSmartAssignmentEstimateSchema = {
+  type: 'OBJECT',
+  properties: {
+    estimatedMinutes: { type: 'INTEGER' },
+    difficultyLevel: { type: 'STRING' },
+    readingMinutes: { type: 'INTEGER' },
+    solvingMinutes: { type: 'INTEGER' },
+    reviewMinutes: { type: 'INTEGER' },
+    rationale: { type: 'STRING' },
+    pacingAdvice: { type: 'STRING' },
+  },
+  required: [
+    'estimatedMinutes',
+    'difficultyLevel',
+    'readingMinutes',
+    'solvingMinutes',
+    'reviewMinutes',
+    'rationale',
+    'pacingAdvice',
+  ],
+};
 
 // 1. My Classes
 async function getMyClasses(req, res) {
@@ -976,6 +1010,334 @@ async function getTeacherDashboard(req, res) {
   }
 }
 
+// Smart AI Assignment Effort Estimator & Workload Overload Rescheduler
+async function handleSmartAssignmentEstimate(req, res) {
+  try {
+    const { title, description, classId, section, subjectId, dueDate } = req.body;
+    const schoolId = req.user.schoolId;
+
+    if (!title) {
+      return res.status(400).json({ error: 'Assignment title is required' });
+    }
+
+    // Resolve Subject and Class name for high-accuracy prompt context
+    let subjectName = 'General Studies';
+    if (subjectId) {
+      const sub = await Subject.findById(subjectId).select('name').lean();
+      if (sub) subjectName = sub.name;
+    }
+
+    let className = 'Class 10';
+    if (classId) {
+      const cls = await Class.findById(classId).select('name').lean();
+      if (cls) className = cls.name;
+    }
+
+    // Step A: Coded Context & Pedagogical Gemini Estimation
+    const systemInstruction = `You are a certified educational workload analyst and pedagogy specialist for secondary schools.
+Your role is to estimate realistic completion time for homework assignments for ${className} students.
+Coded Pedagogical Context & Guidelines:
+- Target Grade: ${className} (Age 15-16, secondary curriculum standard).
+- Technical reading speed: ~150 words per minute.
+- Basic concept recall / direct questions: 3 to 5 minutes each.
+- Multi-step calculation / problem solving (Maths/Physics/Chemistry): 6 to 10 minutes per problem.
+- Long analytical / essay / source-based questions: 15 to 25 minutes each.
+- Review & self-check: ~5 minutes.
+- Maximum recommended total homework across ALL subjects combined per day is 90 minutes.
+Be realistic, objective, and account for the cognitive effort needed for drafting, problem-solving, and proofreading.`;
+
+    const prompt = `Analyze this school assignment and estimate completion time in minutes for ${className} students:
+Subject: ${subjectName}
+Assignment Title: "${title}"
+Assignment Content & Questions:
+"""
+${description || title}
+"""
+
+Provide a structured estimation with:
+- estimatedMinutes: realistic completion time integer between 15 and 90
+- difficultyLevel: "Light" (15-30m), "Moderate" (35-55m), or "Challenging" (60-90m)
+- readingMinutes: time to read theory and questions
+- solvingMinutes: time to draft answers and calculate
+- reviewMinutes: time to review and format
+- rationale: 2-3 sentences explaining the breakdown based on question count, difficulty, and cognitive demand
+- pacingAdvice: a clear recommendation for the student on how to tackle this assignment effectively`;
+
+    let estimationData;
+    try {
+      const aiRes = await executeJSON({
+        user: req.user,
+        feature: 'smart_assignment_estimate',
+        prompt,
+        systemInstruction,
+        schema: GeminiSmartAssignmentEstimateSchema,
+        responseSchema: GeminiSmartAssignmentEstimateSchema,
+        zodSchema: SmartAssignmentEstimateSchema,
+        subjectId,
+      });
+      estimationData = aiRes.data;
+    } catch (aiErr) {
+      console.warn('AI estimate error, using rule-based fallback:', aiErr.message);
+      const wordCount = ((description || '') + ' ' + title).split(/\s+/).length;
+      const baseMinutes = Math.min(90, Math.max(25, Math.round(wordCount * 0.4) + 20));
+      estimationData = {
+        estimatedMinutes: baseMinutes,
+        difficultyLevel: baseMinutes > 55 ? 'Challenging' : baseMinutes > 35 ? 'Moderate' : 'Light',
+        readingMinutes: Math.round(baseMinutes * 0.2),
+        solvingMinutes: Math.round(baseMinutes * 0.7),
+        reviewMinutes: Math.max(5, Math.round(baseMinutes * 0.1)),
+        rationale: `Estimated based on pedagogical rubric for ${className} ${subjectName} assignments (~${wordCount} words).`,
+        pacingAdvice: 'Complete during a single focused evening study session.',
+      };
+    }
+
+    const estimatedMinutes = estimationData.estimatedMinutes;
+
+    // Step B: Workload Analysis & Smart Rescheduling
+    let workloadAnalysis = null;
+    if (classId && section) {
+      const targetDate = new Date(dueDate || Date.now());
+      targetDate.setHours(0, 0, 0, 0);
+
+      // Find Monday of the target week
+      const dayOfWeek = targetDate.getDay();
+      const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      const monday = new Date(targetDate);
+      monday.setDate(targetDate.getDate() + diffToMonday);
+      monday.setHours(0, 0, 0, 0);
+
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      sunday.setHours(23, 59, 59, 999);
+
+      const weekAssignments = await Assignment.find({
+        classId,
+        section: section.trim().toUpperCase(),
+        dueDate: { $gte: monday, $lte: sunday },
+        schoolId,
+      })
+        .populate('subjectId', 'name code')
+        .lean();
+
+      const dayMap = {};
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        const dateKey = d.toISOString().split('T')[0];
+        dayMap[dateKey] = {
+          date: dateKey,
+          dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
+          formattedDate: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+          assignments: [],
+          totalMinutes: 0,
+          count: 0,
+          isOverloaded: false,
+          isTargetDate: false,
+          isSuggestedDate: false,
+        };
+      }
+
+      for (const a of weekAssignments) {
+        const dKey = new Date(a.dueDate).toISOString().split('T')[0];
+        if (dayMap[dKey]) {
+          dayMap[dKey].assignments.push({
+            id: a._id,
+            title: a.title,
+            subjectName: a.subjectId?.name || 'Subject',
+            estimatedMinutes: a.estimatedMinutes || 45,
+          });
+          dayMap[dKey].totalMinutes += (a.estimatedMinutes || 45);
+          dayMap[dKey].count += 1;
+          if (dayMap[dKey].totalMinutes > 90 || dayMap[dKey].count >= 2) {
+            dayMap[dKey].isOverloaded = true;
+          }
+        }
+      }
+
+      const targetKey = targetDate.toISOString().split('T')[0];
+      if (dayMap[targetKey]) {
+        dayMap[targetKey].isTargetDate = true;
+      }
+
+      const currentTargetMinutes = dayMap[targetKey]?.totalMinutes || 0;
+      const currentTargetCount = dayMap[targetKey]?.count || 0;
+      const combinedTargetMinutes = currentTargetMinutes + estimatedMinutes;
+      const isOverloaded = combinedTargetMinutes > 90 || currentTargetCount >= 2;
+
+      let warningMessage = null;
+      let suggestedDate = null;
+      let suggestedDateFormatted = null;
+      let suggestedDateMinutes = 0;
+      let suggestedCombinedMinutes = 0;
+      let rescheduleReason = null;
+
+      if (isOverloaded) {
+        warningMessage = `Cognitive Overload Alert: Class ${className} - ${section} already has ${currentTargetCount} assignment(s) (~${currentTargetMinutes} mins) due on ${dayMap[targetKey]?.formattedDate || targetKey}. Adding this assignment (+${estimatedMinutes} mins) pushes total daily homework to ${combinedTargetMinutes} mins, exceeding the recommended 90-minute daily limit!`;
+
+        // Search candidate days sorted by distance from targetDate, preferring weekdays
+        const candidateKeys = Object.keys(dayMap).filter((k) => k !== targetKey);
+        candidateKeys.sort((a, b) => {
+          const distA = Math.abs(new Date(a) - targetDate);
+          const distB = Math.abs(new Date(b) - targetDate);
+          const isSundayA = new Date(a).getDay() === 0 ? 1 : 0;
+          const isSundayB = new Date(b).getDay() === 0 ? 1 : 0;
+          if (isSundayA !== isSundayB) return isSundayA - isSundayB;
+          const loadA = dayMap[a].totalMinutes;
+          const loadB = dayMap[b].totalMinutes;
+          if (loadA !== loadB) return loadA - loadB;
+          return distA - distB;
+        });
+
+        const bestKey = candidateKeys[0];
+        if (bestKey && dayMap[bestKey]) {
+          suggestedDate = bestKey;
+          dayMap[bestKey].isSuggestedDate = true;
+          suggestedDateFormatted = dayMap[bestKey].formattedDate;
+          suggestedDateMinutes = dayMap[bestKey].totalMinutes;
+          suggestedCombinedMinutes = suggestedDateMinutes + estimatedMinutes;
+          rescheduleReason = `Rescheduling to ${suggestedDateFormatted} is optimal because students currently have only ${suggestedDateMinutes} mins of homework scheduled (combining to ${suggestedCombinedMinutes} mins), avoiding fatigue and improving submission rates.`;
+        }
+      }
+
+      workloadAnalysis = {
+        isOverloaded,
+        targetDate: targetKey,
+        targetDateFormatted: dayMap[targetKey]?.formattedDate || targetKey,
+        currentTargetMinutes,
+        currentTargetCount,
+        combinedTargetMinutes,
+        warningMessage,
+        suggestedDate,
+        suggestedDateFormatted,
+        suggestedDateMinutes,
+        suggestedCombinedMinutes,
+        rescheduleReason,
+        weekWorkload: Object.values(dayMap),
+      };
+    }
+
+    return res.json({
+      estimation: estimationData,
+      workload: workloadAnalysis,
+    });
+  } catch (err) {
+    console.error('handleSmartAssignmentEstimate error:', err);
+    return res.status(500).json({ error: 'Failed to estimate assignment effort' });
+  }
+}
+
+// 12. Get Teacher Workload Calendar
+async function getTeacherWorkloadCalendar(req, res) {
+  try {
+    const { classId, section, date } = req.query;
+    const schoolId = req.user.schoolId;
+
+    if (!classId || !section) {
+      return res.status(400).json({ error: 'classId and section are required' });
+    }
+
+    const targetDate = new Date(date || Date.now());
+    targetDate.setHours(0, 0, 0, 0);
+
+    const dayOfWeek = targetDate.getDay();
+    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(targetDate);
+    monday.setDate(targetDate.getDate() + diffToMonday);
+    monday.setHours(0, 0, 0, 0);
+
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+
+    const assignments = await Assignment.find({
+      classId,
+      section: section.trim().toUpperCase(),
+      dueDate: { $gte: monday, $lte: sunday },
+      schoolId,
+    })
+      .populate('subjectId', 'name code')
+      .populate('topicId', 'title')
+      .lean();
+
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const dateKey = d.toISOString().split('T')[0];
+      const dayAssignments = assignments.filter(
+        (a) => new Date(a.dueDate).toISOString().split('T')[0] === dateKey
+      );
+      const totalMinutes = dayAssignments.reduce((sum, a) => sum + (a.estimatedMinutes || 45), 0);
+      days.push({
+        date: dateKey,
+        dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
+        formattedDate: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+        assignments: dayAssignments.map((a) => ({
+          id: a._id,
+          title: a.title,
+          subjectName: a.subjectId?.name || 'Subject',
+          subjectCode: a.subjectId?.code || '',
+          topicTitle: a.topicId?.title || '',
+          estimatedMinutes: a.estimatedMinutes || 45,
+          totalMarks: a.totalMarks,
+          status: a.status,
+        })),
+        totalMinutes,
+        totalHours: Number((totalMinutes / 60).toFixed(1)),
+        isOverloaded: totalMinutes > 90 || dayAssignments.length >= 2,
+      });
+    }
+
+    return res.json({
+      startDate: monday.toISOString().split('T')[0],
+      endDate: sunday.toISOString().split('T')[0],
+      days,
+    });
+  } catch (err) {
+    console.error('getTeacherWorkloadCalendar error:', err);
+    return res.status(500).json({ error: 'Failed to retrieve workload calendar' });
+  }
+}
+
+// 13. Get All Assignments for Teacher
+async function getTeacherAssignments(req, res) {
+  try {
+    const teacher = req.user;
+    const schoolId = teacher.schoolId;
+    const { classId, section } = req.query;
+
+    const filter = { teacherId: teacher._id, schoolId };
+    if (classId) filter.classId = classId;
+    if (section) filter.section = section.trim().toUpperCase();
+
+    const assignments = await Assignment.find(filter)
+      .populate('classId', 'name')
+      .populate('subjectId', 'name code')
+      .populate('topicId', 'title')
+      .sort({ dueDate: -1 })
+      .lean();
+
+    const assignmentsWithStats = await Promise.all(
+      assignments.map(async (a) => {
+        const submissionCount = await Submission.countDocuments({
+          assignmentId: a._id,
+          status: { $in: ['submitted', 'graded'] },
+          schoolId,
+        });
+        return {
+          ...a,
+          submissionCount,
+        };
+      })
+    );
+
+    return res.json({ assignments: assignmentsWithStats });
+  } catch (err) {
+    console.error('getTeacherAssignments error:', err);
+    return res.status(500).json({ error: 'Failed to retrieve teacher assignments' });
+  }
+}
+
 module.exports = {
   getMyClasses,
   getClassWorkspace,
@@ -990,4 +1352,7 @@ module.exports = {
   createTeacherLesson,
   markAttendance,
   getTeacherDashboard,
+  handleSmartAssignmentEstimate,
+  getTeacherWorkloadCalendar,
+  getTeacherAssignments,
 };

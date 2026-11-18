@@ -30,17 +30,21 @@ interface TeacherClassItem {
 
 export default function TeacherClassesPage() {
   const { toast } = useToast();
-  const [classes, setClasses] = useState<TeacherClassItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [classes, setClasses] = useState<TeacherClassItem[]>(() => {
+    const cached = api.getCached<{ classes: TeacherClassItem[] }>("/api/teacher/classes");
+    return cached?.classes || [];
+  });
+  const [loading, setLoading] = useState<boolean>(() => !api.getCached("/api/teacher/classes"));
 
   useEffect(() => {
+    const hasCached = !!api.getCached("/api/teacher/classes");
     const fetchClasses = async () => {
       try {
-        setLoading(true);
+        if (!hasCached) setLoading(true);
         const res = await api.get<{ classes: TeacherClassItem[] }>("/api/teacher/classes");
         setClasses(res.classes || []);
       } catch (err: any) {
-        toast(err.message || "Failed to load assigned classes", "error");
+        if (!hasCached) toast(err.message || "Failed to load assigned classes", "error");
       } finally {
         setLoading(false);
       }

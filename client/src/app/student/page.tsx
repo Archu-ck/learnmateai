@@ -90,24 +90,29 @@ interface StudentDashboardData {
 export default function StudentDashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const [data, setData] = useState<StudentDashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<StudentDashboardData | null>(() =>
+    api.getCached<StudentDashboardData>("/api/student/dashboard")
+  );
+  const [loading, setLoading] = useState<boolean>(
+    () => !api.getCached("/api/student/dashboard")
+  );
   const [aiDoubtInput, setAiDoubtInput] = useState("");
 
-  const loadDashboard = async () => {
+  const loadDashboard = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await api.get<StudentDashboardData>("/api/student/dashboard");
       setData(res);
     } catch (err: any) {
-      toast(err.message || "Failed to load dashboard data", "error");
+      if (!silent) toast(err.message || "Failed to load dashboard data", "error");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadDashboard();
+    const hasCached = !!api.getCached("/api/student/dashboard");
+    loadDashboard(hasCached);
   }, []);
 
   const todayDateString = new Date().toLocaleDateString("en-US", {

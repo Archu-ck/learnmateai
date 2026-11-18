@@ -37,8 +37,11 @@ interface StudentAssignmentItem {
 
 export default function StudentAssignmentsPage() {
   const { toast } = useToast();
-  const [assignments, setAssignments] = useState<StudentAssignmentItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [assignments, setAssignments] = useState<StudentAssignmentItem[]>(() => {
+    const cached = api.getCached<{ assignments: StudentAssignmentItem[] }>("/api/student/assignments");
+    return cached?.assignments || [];
+  });
+  const [loading, setLoading] = useState<boolean>(() => !api.getCached("/api/student/assignments"));
 
   // Filters
   const [subjectFilter, setSubjectFilter] = useState<string>("ALL");
@@ -46,15 +49,16 @@ export default function StudentAssignmentsPage() {
   const [sortBy, setSortBy] = useState<"dueDate" | "title">("dueDate");
 
   useEffect(() => {
+    const hasCached = !!api.getCached("/api/student/assignments");
     const fetchAssignments = async () => {
       try {
-        setLoading(true);
+        if (!hasCached) setLoading(true);
         const res = await api.get<{ assignments: StudentAssignmentItem[] }>(
           "/api/student/assignments"
         );
         setAssignments(res.assignments || []);
       } catch (err: any) {
-        toast(err.message || "Failed to load assignments", "error");
+        if (!hasCached) toast(err.message || "Failed to load assignments", "error");
       } finally {
         setLoading(false);
       }

@@ -8,6 +8,7 @@ import { useToast } from "@/components/Toast";
 import AiDoubtChat from "@/components/AiDoubtChat";
 import StudentPracticeQuizModal from "@/components/StudentPracticeQuizModal";
 import NeumorphicSelect from "@/components/NeumorphicSelect";
+import { SkeletonWorkspace } from "@/components/Skeleton";
 import { getSocket } from "@/lib/socket";
 import {
   BookOpen,
@@ -321,8 +322,7 @@ export default function SubjectWorkspacePage({
   if (loading || !data) {
     return (
       <div className="space-y-6 w-full pb-16 font-sans">
-        <div className="h-28 neu-card animate-pulse rounded-3xl" />
-        <div className="h-96 neu-card animate-pulse rounded-3xl" />
+        <SkeletonWorkspace />
       </div>
     );
   }

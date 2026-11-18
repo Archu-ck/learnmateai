@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 import NeumorphicSelect from "@/components/NeumorphicSelect";
+import { SkeletonAssignmentList } from "@/components/Skeleton";
 import {
   FileText,
   Clock,
@@ -139,14 +140,7 @@ export default function StudentAssignmentsPage() {
       </div>
 
       {loading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-28 neu-card animate-pulse"
-            />
-          ))}
-        </div>
+        <SkeletonAssignmentList />
       ) : filtered.length === 0 ? (
         <div className="p-12 text-center neu-card text-slate-400">
           <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />

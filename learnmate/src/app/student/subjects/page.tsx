@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
+import { SkeletonSubjectCard } from "@/components/Skeleton";
 import {
   BookOpen,
   User,
@@ -108,11 +109,8 @@ export default function StudentSubjectsPage() {
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div
-              key={i}
-              className="h-56 neu-card animate-pulse"
-            />
+          {[1, 2, 3, 4].map((i) => (
+            <SkeletonSubjectCard key={i} />
           ))}
         </div>
       ) : filtered.length === 0 ? (

@@ -198,6 +198,48 @@ select option {
   padding: 8px 12px;
 }
 
+/* Neumorphic Shimmer Skeleton Loading */
+@keyframes neu-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.neu-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(226, 232, 240, 0.5) 0%,
+    rgba(255, 255, 255, 0.85) 50%,
+    rgba(226, 232, 240, 0.5) 100%
+  );
+  background-size: 200% 100%;
+  animation: neu-shimmer 1.6s infinite ease-in-out;
+}
+
+/* Neumorphic Shimmer Skeleton Loading */
+@keyframes neu-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.neu-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(226, 232, 240, 0.5) 0%,
+    rgba(255, 255, 255, 0.85) 50%,
+    rgba(226, 232, 240, 0.5) 100%
+  );
+  background-size: 200% 100%;
+  animation: neu-shimmer 1.6s infinite ease-in-out;
+}
+
 /* Soft Pill Badge */
 .neu-pill {
   border-radius: 9999px;

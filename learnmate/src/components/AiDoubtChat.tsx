@@ -304,11 +304,11 @@ export default function AiDoubtChat({
   );
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 h-[720px] max-h-[85vh]">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 h-[calc(100vh-220px)] min-h-[500px] max-h-[700px] w-full">
       {/* LEFT COLUMN: Discussions Drawer */}
-      <div className="lg:col-span-4 neu-card p-4 sm:p-5 flex flex-col justify-between overflow-hidden">
-        <div className="space-y-3 flex-1 flex flex-col overflow-hidden">
-          <div className="flex items-center justify-between pb-2 border-b border-white/80">
+      <div className="lg:col-span-4 neu-card p-4 sm:p-5 flex flex-col h-full min-h-0 overflow-hidden">
+        <div className="space-y-3 flex-1 min-h-0 flex flex-col overflow-hidden">
+          <div className="shrink-0 flex items-center justify-between pb-2 border-b border-white/80">
             <h3 className="text-xs font-black uppercase text-slate-700 tracking-wider flex items-center gap-1.5">
               <Bot size={15} className="text-indigo-600" />
               <span>Doubt Threads</span>
@@ -324,7 +324,7 @@ export default function AiDoubtChat({
           </div>
 
           {/* Search conversations */}
-          <div className="relative">
+          <div className="shrink-0 relative">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
@@ -336,7 +336,7 @@ export default function AiDoubtChat({
           </div>
 
           {/* Conversations list */}
-          <div className="flex-1 overflow-y-auto space-y-2 pr-1 scrollbar-slim">
+          <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1 scrollbar-slim">
             {filteredConversations.map((c) => {
               const isSelected = c._id === activeConvId;
               return (
@@ -369,15 +369,15 @@ export default function AiDoubtChat({
         </div>
 
         {/* Tip at bottom */}
-        <div className="pt-3 border-t border-white/80 text-[11px] text-slate-500 font-medium">
+        <div className="shrink-0 pt-3 border-t border-white/80 text-[11px] text-slate-500 font-medium">
           💡 <strong className="text-slate-700">Hint Ladder:</strong> Ask questions step-by-step to build conceptual mastery.
         </div>
       </div>
 
       {/* RIGHT COLUMN: Active Chat Panel */}
-      <div className="lg:col-span-8 neu-card p-4 sm:p-5 flex flex-col justify-between overflow-hidden">
+      <div className="lg:col-span-8 neu-card p-4 sm:p-5 flex flex-col h-full min-h-0 overflow-hidden">
         {/* Header Strip with Topic Selector */}
-        <div className="flex items-center justify-between pb-3 border-b border-white/80 gap-3 flex-wrap">
+        <div className="shrink-0 flex items-center justify-between pb-3 border-b border-white/80 gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 shadow-xs">
               <Bot size={17} />
@@ -420,7 +420,7 @@ export default function AiDoubtChat({
         </div>
 
         {/* Message Stream Area */}
-        <div className="flex-1 overflow-y-auto py-4 space-y-4 pr-1 scrollbar-slim">
+        <div className="flex-1 min-h-0 overflow-y-auto py-3 space-y-4 pr-1 scrollbar-slim">
           {messages.length === 0 && !streamingText && (
             <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3">
               <div className="w-14 h-14 rounded-2xl neu-inset flex items-center justify-center text-indigo-600">
@@ -569,7 +569,7 @@ export default function AiDoubtChat({
         </div>
 
         {/* Suggestion Chips */}
-        <div className="flex items-center gap-2 py-2 overflow-x-auto scrollbar-slim">
+        <div className="shrink-0 flex items-center gap-2 py-2 overflow-x-auto scrollbar-slim">
           {[
             { label: "Give me a hint", icon: "💡" },
             { label: "Explain simply", icon: "🔍" },
@@ -588,8 +588,8 @@ export default function AiDoubtChat({
           ))}
         </div>
 
-        {/* Input Form & Action Bar */}
-        <div className="pt-2 border-t border-white/80">
+        {/* Input Form & Action Bar - Guaranteed visible & pinned */}
+        <div className="shrink-0 pt-2 border-t border-white/80 bg-[#edf2f7]/80 backdrop-blur-xs">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -607,10 +607,10 @@ export default function AiDoubtChat({
                     handleSendMessage();
                   }
                 }}
-                placeholder={`Ask a homework or curriculum study doubt in ${subjectName} (academic questions only)...`}
-                rows={2}
+                placeholder={`Ask a syllabus doubt in ${subjectName}... (Press Enter to ask)`}
+                rows={1}
                 disabled={isStreaming}
-                className="neu-input w-full resize-none text-xs font-medium p-3 rounded-xl"
+                className="neu-input w-full resize-none text-xs font-medium px-3.5 py-2.5 rounded-xl min-h-[42px] max-h-24 leading-relaxed"
               />
             </div>
 
@@ -618,7 +618,7 @@ export default function AiDoubtChat({
               <button
                 type="button"
                 onClick={handleStopStreaming}
-                className="neu-btn h-10 px-3.5 rounded-xl text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 cursor-pointer shrink-0"
+                className="neu-btn h-[42px] px-3.5 rounded-xl text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 cursor-pointer shrink-0"
                 title="Stop streaming response"
               >
                 <Square size={13} className="fill-rose-600" />
@@ -628,7 +628,7 @@ export default function AiDoubtChat({
               <button
                 type="submit"
                 disabled={!inputQuestion.trim()}
-                className="neu-btn-primary h-10 px-4 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0 disabled:opacity-40"
+                className="neu-btn-primary h-[42px] px-4 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0 disabled:opacity-40"
               >
                 <Send size={13} />
                 <span>Ask</span>

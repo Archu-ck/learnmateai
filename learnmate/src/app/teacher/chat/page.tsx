@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 import { getSocket } from "@/lib/socket";
+import { SkeletonChatInbox } from "@/components/Skeleton";
 import {
   MessageSquare,
   Search,
@@ -225,6 +226,13 @@ export default function TeacherChatInboxPage() {
 
         {/* Status Indicators */}
         <div className="flex items-center gap-2.5 flex-wrap">
+          {totalUnread > 0 && (
+            <span className="neu-pill text-xs font-black px-3 py-1 bg-indigo-100 text-indigo-800 border border-indigo-200 flex items-center gap-1.5 animate-pulse">
+              <span className="w-2 h-2 rounded-full bg-indigo-600"></span>
+              <span>{totalUnread} Unread Messages</span>
+            </span>
+          )}
+
           {totalDoubts > 0 && (
             <span className="neu-pill text-xs font-black px-3 py-1 bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1.5">
               <HelpCircle size={13} />
@@ -252,9 +260,12 @@ export default function TeacherChatInboxPage() {
       </div>
 
       {/* Main Full-Height Chat Container (Split Pane) */}
-      <div className="neu-card flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 overflow-hidden rounded-3xl">
-        {/* Left Column: Thread List (4 cols on lg, 5 on md) */}
-        <div className="md:col-span-5 lg:col-span-4 border-r border-white/80 flex flex-col h-full bg-white/20">
+      {loadingThreads ? (
+        <SkeletonChatInbox />
+      ) : (
+        <div className="neu-card flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 overflow-hidden rounded-3xl">
+          {/* Left Column: Thread List (4 cols on lg, 5 on md) */}
+          <div className="md:col-span-5 lg:col-span-4 border-r border-white/80 flex flex-col h-full min-h-0 bg-white/20">
           {/* Search & Filter Toolbar */}
           <div className="p-3.5 border-b border-white/80 bg-white/30 space-y-2.5 shrink-0">
             <div className="relative">
@@ -295,19 +306,26 @@ export default function TeacherChatInboxPage() {
               <button
                 type="button"
                 onClick={() => setFilterMode("unread")}
-                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                   filterMode === "unread"
                     ? "neu-btn-primary text-white"
+                    : totalUnread > 0
+                    ? "neu-btn text-indigo-700 font-extrabold bg-indigo-50/80 border border-indigo-200"
                     : "neu-btn text-slate-600 hover:text-slate-900"
                 }`}
               >
-                Unread ({totalUnread})
+                <span>Unread</span>
+                {totalUnread > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-black flex items-center justify-center">
+                    {totalUnread}
+                  </span>
+                )}
               </button>
             </div>
           </div>
 
           {/* Threads List */}
-          <div className="flex-1 overflow-y-auto divide-y divide-white/60 scrollbar-slim">
+          <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-white/60 scrollbar-slim">
             {loadingThreads ? (
               <div className="p-8 text-center text-xs text-slate-400 font-medium">Loading inbox conversations...</div>
             ) : filteredThreads.length === 0 ? (
@@ -367,8 +385,9 @@ export default function TeacherChatInboxPage() {
 
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       {t.unreadTeacherCount > 0 && (
-                        <span className="neu-pill px-2 py-0.5 bg-indigo-600 text-white text-[10px] font-extrabold">
-                          {t.unreadTeacherCount}
+                        <span className="neu-pill px-2 py-0.5 bg-gradient-to-r from-indigo-500 to-violet-600 text-white text-[10px] font-black shadow-xs flex items-center gap-1 animate-pulse">
+                          <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
+                          <span>{t.unreadTeacherCount} new</span>
                         </span>
                       )}
                       {t.hasUnresolvedDoubts && (
@@ -385,7 +404,7 @@ export default function TeacherChatInboxPage() {
         </div>
 
         {/* Right Column: Active Thread Messages & Actions */}
-        <div className="md:col-span-7 lg:col-span-8 flex flex-col h-full bg-white/10">
+        <div className="md:col-span-7 lg:col-span-8 flex flex-col h-full min-h-0 bg-white/10 overflow-hidden">
           {activeThread ? (
             <>
               {/* Thread Header */}
@@ -421,7 +440,7 @@ export default function TeacherChatInboxPage() {
               </div>
 
               {/* Messages Scroll Feed */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-4 neu-inset m-3 rounded-2xl scrollbar-slim">
+              <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-4 neu-inset m-3 rounded-2xl scrollbar-slim">
                 {loadingMessages ? (
                   <div className="text-center text-xs text-slate-400 py-16 font-medium">
                     Loading conversation...
@@ -549,6 +568,7 @@ export default function TeacherChatInboxPage() {
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }

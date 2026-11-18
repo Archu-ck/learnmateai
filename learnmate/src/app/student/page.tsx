@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import RoleGuard from "@/components/RoleGuard";
 import { useToast } from "@/components/Toast";
+import { SkeletonDashboard } from "@/components/Skeleton";
 import {
   FileText,
   BookOpen,
@@ -126,7 +127,12 @@ export default function StudentDashboardPage() {
 
   return (
     <RoleGuard allowedRoles={["student"]}>
-      <div className="space-y-6 w-full pb-16 font-sans">
+      {loading ? (
+        <div className="space-y-6 w-full pb-16 font-sans">
+          <SkeletonDashboard />
+        </div>
+      ) : (
+        <div className="space-y-6 w-full pb-16 font-sans">
         {/* Top Greeting Card (Neumorphic) */}
         <div className="neu-card p-6 sm:p-7 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -153,17 +159,7 @@ export default function StudentDashboardPage() {
         </div>
 
         {/* Bento Grid */}
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <div
-                key={i}
-                className="h-44 neu-card animate-pulse"
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             {/* CARD 1: Due soon (2x1) */}
             <Link
               href="/student/assignments"
@@ -597,8 +593,8 @@ export default function StudentDashboardPage() {
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </RoleGuard>
   );
 }

@@ -36,54 +36,101 @@ class MockAIProvider {
     const lastMsg = messages[messages.length - 1]?.content || '';
     const isNonAcademic = /\b(play a game|video game|minecraft|fortnite|roblox|gta|favorite movie|favorite actor|celebrity|tell me a joke|tell a joke|dating|girlfriend|crush|match score|cricket score)\b/i.test(lastMsg);
 
-    const sampleWords = isNonAcademic
-      ? [
-          'I', 'am', 'your', 'LearnMate', 'Academic', 'Tutor,', 'and', 'I', 'am', 'only', 'able', 'to', 'help', 'with', 'your',
-          'school', 'studies,', 'syllabus', 'concepts,', 'and', 'homework.',
-          '\n\nLet\'s', 'focus', 'on', 'your', 'learning!', 'What', 'academic', 'topic', 'or', 'problem', 'from', 'your',
-          'syllabus', 'would', 'you', 'like', 'help', 'with?'
-        ]
-      : [
-          'Hello!',
-          'Let',
-          'us',
-          'explore',
-          `"${lastMsg.slice(0, 30)}..."`,
-          'step',
-          'by',
-          'step.',
-          '\n\nFirst,',
-          'what',
-          'formula',
-          'from',
-          'your',
-          'lesson',
-          'applies',
-          'here?',
-          'Think',
-          'about',
-          'the',
-          'given',
-          'variables.',
-          '\n\nTry',
-          'setting',
-          'up',
-          'the',
-          'first',
-          'equation,',
-          'and',
-          'let',
-          'me',
-          'know',
-          'what',
-          'you',
-          'get!',
-        ];
+    // Extract active chapter/topic and subject from system prompt
+    const topicMatch = systemInstruction?.match(/(?:Current Chapter \/ Topic|Current Topic|Chapter\/Topic):\s*([^\n\.]+)/i);
+    const activeTopic = topicMatch ? topicMatch[1].trim() : '';
 
+    const subjectMatch = systemInstruction?.match(/Subject:\s*([^\n]+)/i);
+    const activeSubject = subjectMatch ? subjectMatch[1].trim() : '';
+
+    let responseText = '';
+
+    if (isNonAcademic) {
+      responseText = `I am your LearnMate Academic Tutor, and I am only able to help with your school studies, syllabus concepts, and homework for ${activeSubject || 'your curriculum'}.\n\nLet's focus on your learning! What academic topic or problem from your syllabus would you like help with?`;
+    } else if (activeTopic.includes('Trigonometry') || lastMsg.toLowerCase().includes('sin') || lastMsg.toLowerCase().includes('trigonometr')) {
+      responseText = `In our chapter on **Introduction to Trigonometry**, let's resolve your doubt step-by-step.
+
+Recall that for any right-angled triangle with acute angle $\\theta$:
+- $\\sin\\theta = \\frac{\\text{Opposite Side}}{\\text{Hypotenuse}}$
+- $\\cos\\theta = \\frac{\\text{Adjacent Side}}{\\text{Hypotenuse}}$
+- $\\tan\\theta = \\frac{\\text{Opposite Side}}{\\text{Adjacent Side}}$
+
+By the Pythagorean theorem in a right triangle:
+$$\\text{Opposite}^2 + \\text{Adjacent}^2 = \\text{Hypotenuse}^2$$
+
+Dividing both sides by $\\text{Hypotenuse}^2$ gives the core identity:
+$$\\left(\\frac{\\text{Opposite}}{\\text{Hypotenuse}}\\right)^2 + \\left(\\frac{\\text{Adjacent}}{\\text{Hypotenuse}}\\right)^2 = 1 \\implies \\sin^2\\theta + \\cos^2\\theta = 1$$
+
+Similarly, dividing by $\\cos^2\\theta$ yields $1 + \\tan^2\\theta = \\sec^2\\theta$, and dividing by $\\sin^2\\theta$ yields $1 + \\cot^2\\theta = \\csc^2\\theta$.
+
+**Concept Check:** If $\\sin\\theta = \\frac{3}{5}$ in a right triangle, what is the value of $\\cos\\theta$?`;
+    } else if (activeTopic.includes('Quadratic') || lastMsg.toLowerCase().includes('quadratic') || lastMsg.toLowerCase().includes('discriminant')) {
+      responseText = `In our chapter on **Quadratic Equations & Discriminant**, let's explore this problem systematically.
+
+A standard quadratic equation is written in the form:
+$$ax^2 + bx + c = 0 \\quad (a \\ne 0)$$
+
+Its roots are given by the Quadratic Formula:
+$$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$
+
+The nature of the roots is governed by the **Discriminant** $D = b^2 - 4ac$:
+1. If $D > 0$, there are **two distinct real roots**.
+2. If $D = 0$, there are **two equal real roots** ($x = -\\frac{b}{2a}$).
+3. If $D < 0$, there are **no real roots** (roots are complex).
+
+**Concept Check:** What is the discriminant of $x^2 - 6x + 9 = 0$, and what does it tell you about its roots?`;
+    } else if (activeTopic.includes('Light') || lastMsg.toLowerCase().includes('reflection') || lastMsg.toLowerCase().includes('refraction') || lastMsg.toLowerCase().includes('mirror') || lastMsg.toLowerCase().includes('lens')) {
+      responseText = `In our chapter on **Light — Reflection and Refraction**, let's understand the governing optical principles.
+
+Key formulas from this chapter:
+1. **Mirror Formula:** $\\frac{1}{f} = \\frac{1}{v} + \\frac{1}{u}$ (where $u$ is object distance, $v$ is image distance, and $f$ is focal length).
+2. **Magnification by Mirrors:** $m = \\frac{h_i}{h_o} = -\\frac{v}{u}$.
+3. **Snell's Law of Refraction:** $\\frac{\\sin i}{\\sin r} = \\frac{n_2}{n_1} = \\text{constant}$, where $n$ is refractive index.
+4. **Lens Formula:** $\\frac{1}{f} = \\frac{1}{v} - \\frac{1}{u}$, with power $P = \\frac{1}{f\\text{ (in metres)}}$ (in Dioptres, D).
+
+Remember the New Cartesian Sign Convention:
+- The object is always placed to the left of the mirror/lens ($u$ is always negative).
+- Distances measured in the direction of incident light are positive.
+
+**Concept Check:** When a ray of light enters an optically denser medium from air, does its speed increase or decrease, and does it bend towards or away from the normal?`;
+    } else if (activeTopic.includes('Chemical') || lastMsg.toLowerCase().includes('reaction') || lastMsg.toLowerCase().includes('equation')) {
+      responseText = `In our chapter on **Chemical Reactions & Equations**, let's break down this concept clearly.
+
+According to the Law of Conservation of Mass, the number of atoms of each element must remain conserved before and after the reaction.
+
+Primary types of chemical reactions in our syllabus:
+- **Combination Reaction:** Two or more reactants combine to form a single product ($A + B \\rightarrow AB$).
+- **Decomposition Reaction:** A single reactant breaks down into simpler products ($AB \\rightarrow A + B$).
+- **Displacement Reaction:** A more reactive element displaces a less reactive element from its compound.
+- **Redox Reaction:** Simultaneous oxidation (gain of oxygen / loss of electrons) and reduction (loss of oxygen / gain of electrons).
+
+**Concept Check:** In the reaction $\\text{Fe} + \\text{CuSO}_4 \\rightarrow \\text{FeSO}_4 + \\text{Cu}$, which metal is more reactive according to the reactivity series?`;
+    } else if (activeTopic.includes('Arithmetic') || activeTopic.includes('AP') || lastMsg.toLowerCase().includes('arithmetic progression')) {
+      responseText = `In our chapter on **Arithmetic Progressions (AP)**, let's break down the sequence step-by-step.
+
+An Arithmetic Progression is a sequence of numbers in which each term after the first is obtained by adding a constant common difference $d$:
+- $n^{\\text{th}}$ term formula: $a_n = a + (n - 1)d$
+- Sum of the first $n$ terms: $S_n = \\frac{n}{2}[2a + (n - 1)d] = \\frac{n}{2}[a + l]$
+
+**Concept Check:** If an AP has first term $a = 2$ and common difference $d = 3$, what is its $15^{\\text{th}}$ term?`;
+    } else {
+      const topicTitle = activeTopic || activeSubject || 'Curriculum Syllabus';
+      responseText = `In our study of **${topicTitle}**, let's examine your doubt step-by-step.
+
+Regarding your question about: *"${lastMsg.slice(0, 50)}..."*
+
+1. **Core Concept:** First, identify the primary definitions and syllabus principles that apply to this problem.
+2. **Key Variables:** List the known values and target unknowns from the problem statement.
+3. **Step-by-Step Approach:** Set up the standard formula taught in **${topicTitle}** before calculating the final answer.
+
+**Concept Check:** Can you state the initial rule or formula from **${topicTitle}** that links the given variables?`;
+    }
+
+    const sampleWords = responseText.split(' ');
     let fullText = '';
     for (const word of sampleWords) {
       if (signal?.aborted) break;
-      await new Promise((r) => setTimeout(r, 45));
+      await new Promise((r) => setTimeout(r, 35));
       fullText += (fullText ? ' ' : '') + word;
       if (typeof onChunk === 'function') {
         onChunk(word + ' ');

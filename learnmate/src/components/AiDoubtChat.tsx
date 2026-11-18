@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
+import NeumorphicSelect from "@/components/NeumorphicSelect";
 import {
   Bot,
   Send,
@@ -399,20 +400,22 @@ export default function AiDoubtChat({
           {/* Syllabus Topic Selector Dropdown */}
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider hidden sm:inline">
-              Topic:
+              Chapter:
             </span>
-            <select
+            <NeumorphicSelect
               value={selectedTopicId}
-              onChange={(e) => setSelectedTopicId(e.target.value)}
-              className="neu-input px-3 py-1.5 text-xs font-bold text-slate-800 cursor-pointer rounded-xl max-w-[200px]"
-            >
-              <option value="">All Topics / Syllabus</option>
-              {topics.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
+              onChange={(newTopicId) => setSelectedTopicId(newTopicId)}
+              options={[
+                { value: "", label: "All Topics / Entire Syllabus", badge: "All" },
+                ...topics.map((t, idx) => ({
+                  value: t.id,
+                  label: t.name,
+                  badge: `Ch ${idx + 1}`,
+                })),
+              ]}
+              icon={<BookOpen size={13} />}
+              minWidth="min-w-[210px] max-w-[260px]"
+            />
           </div>
         </div>
 

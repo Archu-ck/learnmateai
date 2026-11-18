@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
+import NeumorphicSelect from "@/components/NeumorphicSelect";
 import {
   FileText,
   Clock,
@@ -98,38 +99,32 @@ export default function StudentAssignmentsPage() {
         {/* Filter Controls */}
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Subject Filter */}
-          <div className="neu-btn flex items-center gap-2 px-3 py-2 text-xs">
-            <BookOpen className="w-3.5 h-3.5 text-indigo-500" />
-            <select
-              value={subjectFilter}
-              onChange={(e) => setSubjectFilter(e.target.value)}
-              className="font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
-            >
-              <option value="ALL">All Subjects</option>
-              {uniqueSubjects.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
+          <NeumorphicSelect
+            value={subjectFilter}
+            onChange={(val) => setSubjectFilter(val)}
+            options={[
+              { value: "ALL", label: "All Subjects", badge: "All" },
+              ...uniqueSubjects.map((s) => ({ value: s, label: s })),
+            ]}
+            icon={<BookOpen className="w-3.5 h-3.5" />}
+            minWidth="min-w-[170px]"
+          />
 
           {/* Status Filter */}
-          <div className="neu-btn flex items-center gap-2 px-3 py-2 text-xs">
-            <Filter className="w-3.5 h-3.5 text-indigo-500" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
-            >
-              <option value="ALL">All Statuses</option>
-              <option value="Pending">Pending</option>
-              <option value="In progress">In Progress</option>
-              <option value="Submitted">Submitted</option>
-              <option value="Graded">Graded</option>
-              <option value="Late">Late</option>
-            </select>
-          </div>
+          <NeumorphicSelect
+            value={statusFilter}
+            onChange={(val) => setStatusFilter(val)}
+            options={[
+              { value: "ALL", label: "All Statuses" },
+              { value: "Pending", label: "Pending" },
+              { value: "In progress", label: "In Progress" },
+              { value: "Submitted", label: "Submitted" },
+              { value: "Graded", label: "Graded" },
+              { value: "Late", label: "Late" },
+            ]}
+            icon={<Filter className="w-3.5 h-3.5" />}
+            minWidth="min-w-[160px]"
+          />
 
           {/* Sort By */}
           <button

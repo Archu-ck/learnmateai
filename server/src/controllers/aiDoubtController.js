@@ -51,8 +51,8 @@ async function buildDoubtSystemPrompt({ student, subject, topic, classObj }) {
     if (lessons.length > 0) {
       lessonNotesText = lessons
         .map((l) => `Lesson "${l.title}": ${l.content || ''}`)
-        .join('\n')
-        .slice(0, 1500); // Truncate safely
+        .join('\n\n')
+        .slice(0, 2000); // Truncate safely
     }
   }
 
@@ -89,14 +89,40 @@ async function buildDoubtSystemPrompt({ student, subject, topic, classObj }) {
     assignmentRules += `\n- The following active assignments have AI-help set to "Hints only": [${hintsOnlyAssignments.map((a) => a.title).join(', ')}]. NEVER provide the direct final answer or complete working solution for these. Only provide progressive hints and general concept reminders.`;
   }
 
-  const className = classObj ? `${classObj.name} (Grade ${classObj.gradeLevel || 8})` : 'Grade 8';
-  const topicName = topic ? topic.name : 'General Syllabus';
+  const className = classObj ? `${classObj.name} (Grade ${classObj.gradeLevel || 10})` : 'Grade 10';
+  const topicName = topic ? topic.name : 'All Syllabus Chapters';
+
+  // 4. Chapter / Topic Grounding Guidance
+  let chapterDirectives = '';
+  if (topic) {
+    chapterDirectives = `
+MANDATORY CHAPTER/TOPIC DIRECTIVE (STRICT GROUNDING):
+The student has selected Chapter/Topic: "${topic.name}".
+${topic.description ? `Chapter Scope & Objectives: ${topic.description}` : ''}
+${lessonNotesText ? `Official Classroom Lesson Notes for "${topic.name}":\n"""\n${lessonNotesText}\n"""` : ''}
+
+RULES FOR DOUBT CLEARING IN "${topic.name}":
+1. STRICT CHAPTER ANCHORING: Every explanation, formula, theorem, definition, analogy, and worked step MUST strictly belong to "${topic.name}".
+2. EXPLICIT CHAPTER ACKNOWLEDGMENT: In your very first sentence or opening line, explicitly acknowledge this chapter (e.g., "In our chapter on **${topic.name}**..." or "Regarding your question in **${topic.name}**...").
+3. ACCURATE FORMULAS & SYMBOLS: State and apply the standard textbook formulas and definitions taught in "${topic.name}" for ${className} (e.g., standard NCERT / CBSE curriculum).
+4. OFF-TOPIC RE-ALIGNMENT: If the student asks about something from outside "${topic.name}", clearly clarify: "That concept belongs to another topic. In our current chapter **${topic.name}**, the relevant concept is..." and guide them back.
+5. PROGRESSIVE HINTS: Do not dump the final calculation right away. First give a conceptual hint or ask what they have tried, then provide a worked similar example with different numbers, and give the full solution only if asked. Always end with a quick check question about "${topic.name}".`;
+  } else {
+    const allTopics = await Topic.find({ subjectId }).sort({ order: 1 }).select('name').lean();
+    const topicNames = allTopics.map((t) => t.name).join(', ');
+    chapterDirectives = `
+GENERAL SYLLABUS DIRECTIVE:
+The student selected "All Topics / Entire Syllabus". The syllabus chapters for ${subject.name} are: [${topicNames}].
+1. Identify which syllabus chapter the student's question belongs to.
+2. In your opening sentence, clearly declare the chapter: "This question relates to our chapter on **[Chapter Name]**...".
+3. Answer strictly using that chapter's curriculum concepts, formulas, and textbook definitions.`;
+  }
 
   return `You are VidyaAI, a dedicated, encouraging, and academically focused curriculum tutor for ${student.name} in ${className}.
 Subject: ${subject.name}
-Current Topic: ${topicName}
+Current Chapter / Topic: ${topicName}
 ${weakTopicsList ? `Student's Areas Needing Revision: ${weakTopicsList}` : ''}
-${lessonNotesText ? `\nTeacher's Published Notes for this Topic:\n"""\n${lessonNotesText}\n"""` : ''}
+${chapterDirectives}
 
 STRICT ACADEMIC-ONLY CONTENT POLICY (MANDATORY):
 You are strictly an educational study assistant. You are ONLY PERMITTED to answer questions directly related to school academics, curriculum concepts, formulas, derivations, problem-solving, textbook readings, and homework for ${subject.name}.
@@ -172,6 +198,11 @@ async function streamDoubt(req, res) {
       });
     }
 
+    // If topic wasn't explicitly passed but exists on conversation, inherit it
+    if (!topic && conversation?.topicId) {
+      topic = await Topic.findById(conversation.topicId);
+    }
+
     if (!conversation) {
       const title = question.trim().slice(0, 45) + (question.trim().length > 45 ? '...' : '');
       conversation = await AIConversation.create({
@@ -181,6 +212,9 @@ async function streamDoubt(req, res) {
         title,
         schoolId: req.user.schoolId,
       });
+    } else if (topic && (!conversation.topicId || conversation.topicId.toString() !== topic._id.toString())) {
+      conversation.topicId = topic._id;
+      await conversation.save();
     }
 
     // Save student question message

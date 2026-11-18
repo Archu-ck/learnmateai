@@ -62,6 +62,15 @@ app.use('/api/ai', aiRoutes);
 const notificationRoutes = require('./routes/notificationRoutes');
 app.use('/api/notifications', notificationRoutes);
 
+app.get('/', (req, res) => {
+  res.json({
+    status: 'online',
+    service: 'LearnMate LMS Backend API',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });

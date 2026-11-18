@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 import AiDoubtChat from "@/components/AiDoubtChat";
 import StudentPracticeQuizModal from "@/components/StudentPracticeQuizModal";
+import NeumorphicSelect from "@/components/NeumorphicSelect";
 import { getSocket } from "@/lib/socket";
 import {
   BookOpen,
@@ -365,17 +366,17 @@ export default function SubjectWorkspacePage({
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider hidden sm:inline">
               Switch Subject:
             </span>
-            <select
+            <NeumorphicSelect
               value={subjectId}
-              onChange={(e) => router.push(`/student/subjects/${e.target.value}`)}
-              className="neu-input px-3 py-1.5 text-xs font-bold text-slate-800 cursor-pointer rounded-xl"
-            >
-              {allSubjects.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} ({s.code})
-                </option>
-              ))}
-            </select>
+              onChange={(newId) => router.push(`/student/subjects/${newId}`)}
+              options={allSubjects.map((s) => ({
+                value: s.id,
+                label: s.name,
+                badge: s.code,
+              }))}
+              icon={<BookOpen size={13} />}
+              minWidth="min-w-[210px]"
+            />
           </div>
         )}
       </div>

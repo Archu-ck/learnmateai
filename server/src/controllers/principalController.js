@@ -63,15 +63,22 @@ async function getPrincipalDashboard(req, res) {
     // 2. School-wide Attendance Rate
     const recentAttendance = await Attendance.find({ schoolId })
       .sort({ date: -1 })
-      .limit(200)
+      .limit(60)
       .lean();
 
     let schoolAttendanceRate = 94.2; // default institutional benchmark
-    if (recentAttendance.length > 0) {
-      const present = recentAttendance.filter(
-        (a) => a.status === 'present' || a.status === 'late'
-      ).length;
-      schoolAttendanceRate = Number(((present / recentAttendance.length) * 100).toFixed(1));
+    let totalPresentEntries = 0;
+    let totalAttendanceEntries = 0;
+    for (const att of recentAttendance) {
+      for (const rec of att.records || []) {
+        totalAttendanceEntries++;
+        if (rec.status === 'present' || rec.status === 'late') {
+          totalPresentEntries++;
+        }
+      }
+    }
+    if (totalAttendanceEntries > 0) {
+      schoolAttendanceRate = Number(((totalPresentEntries / totalAttendanceEntries) * 100).toFixed(1));
     }
 
     // 3. School-wide Academic Average

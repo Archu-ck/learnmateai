@@ -107,19 +107,34 @@ async function getParentDashboard(req, res) {
     const childSection = selectedChild.sectionId || 'A';
 
     // 1. Attendance Calculation
-    const attendanceRecords = await Attendance.find({
-      studentId: childId,
+    const classAttendances = await Attendance.find({
+      classId: childClassId,
+      section: childSection,
       schoolId,
     })
       .sort({ date: -1 })
       .limit(30)
       .lean();
 
+    const attendanceRecords = [];
+    let presentCount = 0;
+    for (const att of classAttendances) {
+      const rec = (att.records || []).find(
+        (r) => r.studentId?.toString() === childId.toString()
+      );
+      if (rec) {
+        attendanceRecords.push({
+          id: `${att._id}_${rec.studentId}`,
+          date: att.date,
+          status: rec.status,
+          remarks: rec.remarks || (rec.status === 'present' ? 'On time' : 'Excused medical leave'),
+        });
+        if (rec.status === 'present' || rec.status === 'late') presentCount++;
+      }
+    }
+
     let attendancePercentage = 92.5; // realistic default
     if (attendanceRecords.length > 0) {
-      const presentCount = attendanceRecords.filter(
-        (a) => a.status === 'present' || a.status === 'late'
-      ).length;
       attendancePercentage = Number(((presentCount / attendanceRecords.length) * 100).toFixed(1));
     }
 
@@ -430,12 +445,7 @@ async function getParentDashboard(req, res) {
       recentGrades: recentGrades.slice(0, 6),
       pendingAssignments: pendingAssignments.slice(0, 5),
       upcomingTests,
-      recentAttendance: attendanceRecords.slice(0, 10).map((a) => ({
-        id: a._id,
-        date: a.date,
-        status: a.status,
-        remarks: a.remarks || (a.status === 'present' ? 'On time' : 'Excused medical leave'),
-      })),
+      recentAttendance: attendanceRecords.slice(0, 10),
       classTeacher,
       announcements,
       aiInsight,

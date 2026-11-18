@@ -7,47 +7,64 @@
 
 ---
 
-## 🔑 Demo Accounts & Credentials
+## 🔑 Primary 1-Click Role Login Credentials
 
-| Role | Name | Email | Password | Direct Portal Route | Details |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Student** | Aarav Sharma | `student@learnmate.test` | `Password123!` | `/student` | Class 10-A, Roll No. 18, Adm: `ADM-10A-001`. Enrolled in 5 core subjects, homework, study planner, AI doubt solver. |
-| **Teacher** | Meera Krishnan | `teacher@learnmate.test` | `Password123!` | `/teacher` | Class Teacher (Class 10-A), Math & Physics Faculty. Assignment manager, grading queue, workload calendar. |
-| **Parent** | Rajesh Sharma | `parent@learnmate.test` | `Password123!` | `/parent` | Guardian of Aarav Sharma. Attendance tracking, subject mastery, report card, AI guardian briefing. |
-| **Principal** | Dr. Ramesh Iyer | `principal@learnmate.test` | `Password123!` | `/principal` | Head of Institution. School-wide KPIs, department benchmarks, counselor watchlist, faculty directory, AI strategic briefing. |
-| **Admin** | System Administrator | `admin@learnmate.test` | `AdminPass123!` | `/admin` | System Admin. User directory, CSV import, class/section manager, subject allocation, audit log. |
+The login page at [`/login`](https://learnmateai-nu.vercel.app/login) features 1-click role buttons (role names only) with pre-filled credentials:
+
+| Role Name | Name | Email | Password | Direct Portal Route |
+| :--- | :--- | :--- | :--- | :--- |
+| **Student** | Aarav Sharma | `student@learnmate.test` | `Password123!` | `/student` |
+| **Teacher** | Meera Krishnan | `teacher@learnmate.test` | `Password123!` | `/teacher` |
+| **Parent** | Rajesh Sharma | `parent@learnmate.test` | `Password123!` | `/parent` |
+| **Principal** | Dr. Ramesh Iyer | `principal@learnmate.test` | `Password123!` | `/principal` |
+| **Admin Panel** | System Administrator | `admin@learnmate.test` | `AdminPass123!` | `/admin` |
 
 ---
 
-## 📋 Role Highlights & Features
+## 👨‍🏫 All 4 Teaching Faculty
 
-### 1. Student Portal (`/student`)
-- **Dashboard Overview:** Real-time assignments due, upcoming chapter tests, attendance percentage, today's study schedule.
-- **My Subjects (`/student/subjects`):** 5 CBSE Class 10 core subjects with syllabus topics, lessons, and tests.
-- **AI 24/7 Doubt Solver:** Step-by-step streaming tutor powered by Gemini 2.5 Flash.
-- **Homework & Tests (`/student/assignments`, `/student/tests`):** Assignment submission and online quizzes with automated scoring.
-- **Attendance & Progress (`/student/attendance`, `/student/progress`):** Monthly roll-call log and topic mastery analytics.
+All teachers share the password: `Password123!`
 
-### 2. Teacher Portal (`/teacher`)
-- **Teacher Dashboard (`/teacher`):** Needs-grading counter, active homework, class completion rates.
-- **Class Workspaces (`/teacher/classes`):** Class 10-A workspace, syllabus management, digital attendance marker.
-- **Smart Assignment Estimator:** AI-assisted homework duration estimator with workload overload protection.
-- **Workload Calendar (`/teacher/workload`):** Weekly student load heatmap to prevent homework spikes.
+| Teacher Name | Email | Assigned Subjects | Responsibilities |
+| :--- | :--- | :--- | :--- |
+| **Meera Krishnan** | `teacher@learnmate.test` | Mathematics (`MATH10`) | Class Teacher (Class 10-A), Math Lead |
+| **Dr. Vikram Sharma** | `vikram.sharma@learnmate.test` | Science (`SCI10`) | Class Teacher (Class 10-B), Science Lab Lead |
+| **Sunita Menon** | `sunita.menon@learnmate.test` | English Communicative (`ENG10`) | English Department Lead |
+| **Rajiv Tandon** | `rajiv.tandon@learnmate.test` | Social Science (`SST10`) & Hindi (`HIN10`) | Humanities & Languages |
 
-### 3. Parent Portal (`/parent`)
-- **Ward Selector:** Seamless multi-child switching (Aarav Sharma • Class 10-A).
-- **Core KPIs:** Attendance rate (92.5%), academic GPA average (84.5%), pending homework, upcoming exam schedule.
-- **AI Guardian Insights:** Pedagogical progress summary, subject strengths, and home study guidance tips.
-- **Recent Grades & Feedback:** Scored tests/assignments with actual educator commentary.
-- **Class Teacher Contact:** Direct chat and email link to Class Mentor (Meera Krishnan).
+---
 
-### 4. Principal Portal (`/principal`)
-- **Institutional Health Index:** Total students, faculty headcount, campus-wide attendance, school GPA average.
-- **AI Strategic Executive Briefing:** Real-time leadership report synthesized for School Board and executive review.
-- **Classes Academic Health:** Class-by-class student counts, class teacher assignments, and pacing status.
-- **Department Benchmarks:** Performance by subject department (Maths, Science, English, Social Science, Hindi).
-- **Counselor Watchlist:** Proactive alerts for students with attendance $<75\%$ or homework deficits.
-- **Live Audit Trail:** Security logging for academic creations and administrative changes.
+## 🎓 Sample Students (20 Active Students across Class 10)
+
+All students share the password: `Password123!`
+
+### Class 10 - Section A
+| Roll | Name | Email | Admission No. |
+| :--- | :--- | :--- | :--- |
+| **1** | Aarav Sharma | `student@learnmate.test` | `ADM-10A-001` |
+| **2** | Ananya Patel | `ananya.p@learnmate.test` | `ADM-10A-002` |
+| **3** | Rohan Gupta | `rohan.g@learnmate.test` | `ADM-10A-003` |
+| **4** | Priya Nair | `priya.n@learnmate.test` | `ADM-10A-004` |
+| **5** | Kabir Singh | `kabir.s@learnmate.test` | `ADM-10A-005` |
+| **6** | Sneha Roy | `sneha.r@learnmate.test` | `ADM-10A-006` |
+| **7** | Aditya Verma | `aditya.v@learnmate.test` | `ADM-10A-007` |
+| **8** | Diya Sen | `diya.s@learnmate.test` | `ADM-10A-008` |
+| **9** | Yash Joshi | `yash.j@learnmate.test` | `ADM-10A-009` |
+| **10** | Riya Mukherjee | `riya.m@learnmate.test` | `ADM-10A-010` |
+
+### Class 10 - Section B
+| Roll | Name | Email | Admission No. | Note |
+| :--- | :--- | :--- | :--- | :--- |
+| **1** | Devansh Verma | `devansh.v@learnmate.test` | `ADM-10B-011` | *Counselor Watchlist (71% Attendance)* |
+| **2** | Tanvi Rao | `tanvi.r@learnmate.test` | `ADM-10B-012` | Regular student |
+| **3** | Siddharth Mehta | `siddharth.m@learnmate.test` | `ADM-10B-013` | Regular student |
+| **4** | Pooja Hegde | `pooja.h@learnmate.test` | `ADM-10B-014` | Regular student |
+| **5** | Varun Kapoor | `varun.k@learnmate.test` | `ADM-10B-015` | Regular student |
+| **6** | Ishita Bhatt | `ishita.b@learnmate.test` | `ADM-10B-016` | Regular student |
+| **7** | Aryan Saxena | `aryan.s@learnmate.test` | `ADM-10B-017` | Regular student |
+| **8** | Kriti Malhotra | `kriti.m@learnmate.test` | `ADM-10B-018` | Regular student |
+| **9** | Rahul Deshmukh | `rahul.d@learnmate.test` | `ADM-10B-019` | Regular student |
+| **10** | Simran Kaur | `simran.k@learnmate.test` | `ADM-10B-020` | Regular student |
 
 ---
 

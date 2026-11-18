@@ -15,65 +15,51 @@ import {
   Users,
   BarChart3,
   ShieldCheck,
-  CheckCircle2,
-  Sparkles,
 } from "lucide-react";
 
 interface RolePreset {
   role: string;
   title: string;
-  subtitle: string;
   email: string;
   pass: string;
   icon: any;
-  badge: string;
 }
 
 const presets: RolePreset[] = [
   {
     role: "student",
     title: "Student",
-    subtitle: "Aarav Sharma",
     email: "student@learnmate.test",
     pass: "Password123!",
     icon: GraduationCap,
-    badge: "Class 10-A",
   },
   {
     role: "teacher",
     title: "Teacher",
-    subtitle: "Meera Krishnan",
     email: "teacher@learnmate.test",
     pass: "Password123!",
     icon: BookOpen,
-    badge: "Class Mentor",
   },
   {
     role: "parent",
     title: "Parent",
-    subtitle: "Rajesh Sharma",
     email: "parent@learnmate.test",
     pass: "Password123!",
     icon: Users,
-    badge: "Guardian",
   },
   {
     role: "principal",
     title: "Principal",
-    subtitle: "Dr. Ramesh Iyer",
     email: "principal@learnmate.test",
     pass: "Password123!",
     icon: BarChart3,
-    badge: "Leadership",
   },
   {
     role: "admin",
     title: "Admin Panel",
-    subtitle: "System Administrator",
     email: "admin@learnmate.test",
     pass: "AdminPass123!",
     icon: ShieldCheck,
-    badge: "Master Console",
   },
 ];
 
@@ -141,21 +127,15 @@ function LoginForm() {
         </div>
       )}
 
-      {/* Role Selection Tabs */}
+      {/* Role Selection Buttons (Role Names Only) */}
       <div>
-        <div className="flex items-center justify-between mb-2.5">
-          <label className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
-            Select Portal Account
-          </label>
-          <span className="text-[10px] font-bold text-indigo-600 flex items-center gap-1">
-            <Sparkles size={11} />
-            <span>1-Click Autofill</span>
-          </span>
-        </div>
+        <label className="block text-[11px] font-extrabold text-slate-400 uppercase tracking-wider mb-2.5">
+          Select Role
+        </label>
 
-        {/* 5 Role Selectors Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {presets.slice(0, 3).map((p) => {
+        {/* Clean 5-Role Responsive Grid with Role Names Only */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+          {presets.map((p) => {
             const isSelected = selectedRole === p.role;
             const Icon = p.icon;
             return (
@@ -163,7 +143,7 @@ function LoginForm() {
                 key={p.role}
                 type="button"
                 onClick={() => selectPreset(p)}
-                className={`p-2.5 rounded-xl text-left transition-all cursor-pointer flex items-center gap-2.5 ${
+                className={`py-2.5 px-3 rounded-xl text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 ${
                   isSelected
                     ? "neu-inset text-indigo-700 font-extrabold shadow-inner"
                     : "neu-btn text-slate-700 hover:text-slate-900 font-bold"
@@ -176,77 +156,11 @@ function LoginForm() {
                 >
                   <Icon size={14} />
                 </div>
-                <div className="truncate">
-                  <span className="text-xs font-extrabold block leading-tight">{p.title}</span>
-                  <span className="text-[10px] text-slate-400 font-medium block truncate">
-                    {p.subtitle}
-                  </span>
-                </div>
+                <span className="text-xs font-bold leading-tight block">{p.title}</span>
               </button>
             );
           })}
         </div>
-
-        {/* Leadership & Admin Options Row */}
-        <div className="grid grid-cols-2 gap-2 mt-2">
-          {presets.slice(3).map((p) => {
-            const isSelected = selectedRole === p.role;
-            const Icon = p.icon;
-            return (
-              <button
-                key={p.role}
-                type="button"
-                onClick={() => selectPreset(p)}
-                className={`p-2.5 rounded-xl text-left transition-all cursor-pointer flex items-center gap-2.5 ${
-                  isSelected
-                    ? "neu-inset text-indigo-700 font-extrabold shadow-inner"
-                    : "neu-btn text-slate-700 hover:text-slate-900 font-bold"
-                }`}
-              >
-                <div
-                  className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                    isSelected
-                      ? p.role === "admin"
-                        ? "bg-slate-800 text-amber-400"
-                        : "bg-amber-500 text-white"
-                      : "bg-slate-200/80 text-slate-600"
-                  }`}
-                >
-                  <Icon size={14} />
-                </div>
-                <div className="truncate">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-extrabold block leading-tight">{p.title}</span>
-                    <span
-                      className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
-                        p.role === "admin"
-                          ? "bg-purple-100 text-purple-700"
-                          : "bg-amber-100 text-amber-700"
-                      }`}
-                    >
-                      {p.badge}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-slate-400 font-medium block truncate">
-                    {p.subtitle}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Selected Account Info Capsule */}
-      <div className="neu-inset p-3 rounded-xl flex items-center justify-between text-xs">
-        <div className="flex items-center gap-2">
-          <CheckCircle2 size={14} className="text-emerald-500" />
-          <span className="font-bold text-slate-700">Ready to sign in as</span>
-          <span className="font-extrabold text-indigo-700">{activePreset.title}</span>
-        </div>
-        <span className="text-[11px] font-semibold text-slate-400">
-          {activePreset.subtitle}
-        </span>
       </div>
 
       {/* Credentials Form */}
@@ -313,9 +227,7 @@ function LoginForm() {
           className="neu-btn-primary w-full py-3.5 text-xs sm:text-sm font-bold rounded-2xl flex items-center justify-center gap-2 cursor-pointer shadow-lg disabled:opacity-50"
         >
           <span>
-            {loading
-              ? "Authenticating..."
-              : `Sign In to ${activePreset.title}`}
+            {loading ? "Authenticating..." : `Sign In as ${activePreset.title}`}
           </span>
           <ArrowRight size={16} />
         </button>
@@ -327,7 +239,7 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[#f0f3f8] flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8 font-sans">
-      <div className="sm:mx-auto sm:w-full sm:max-w-lg text-center">
+      <div className="sm:mx-auto sm:w-full sm:max-w-xl text-center">
         {/* Brand Icon */}
         <div className="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-600 items-center justify-center shadow-lg shadow-indigo-500/30 mb-3 group hover:scale-105 transition-transform">
           <GraduationCap className="w-8 h-8 text-white" />
@@ -340,7 +252,7 @@ export default function LoginPage() {
         </p>
       </div>
 
-      <div className="mt-7 sm:mx-auto sm:w-full sm:max-w-lg">
+      <div className="mt-7 sm:mx-auto sm:w-full sm:max-w-xl">
         <Suspense
           fallback={
             <div className="neu-card p-8 text-center text-xs font-bold text-slate-400 animate-pulse">

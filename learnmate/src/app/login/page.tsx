@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth, getRolePath } from "@/context/AuthContext";
 import {
@@ -15,6 +16,7 @@ import {
   Users,
   BarChart3,
   ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 
 interface RolePreset {
@@ -77,6 +79,7 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
 
   useEffect(() => {
     if (initialRoleParam) {
@@ -90,6 +93,17 @@ function LoginForm() {
   }, [initialRoleParam]);
 
   const selectPreset = (p: RolePreset) => {
+    if (demoMode) {
+      if (p.role === "student") {
+        router.push("/login/select?role=student");
+        return;
+      }
+      if (p.role === "teacher") {
+        router.push("/login/select?role=teacher");
+        return;
+      }
+    }
+
     setSelectedRole(p.role);
     setEmail(p.email);
     setPassword(p.pass);
@@ -129,9 +143,23 @@ function LoginForm() {
 
       {/* Role Selection Buttons (Role Names Only) */}
       <div>
-        <label className="block text-[11px] font-extrabold text-slate-400 uppercase tracking-wider mb-2.5">
-          Select Role
-        </label>
+        <div className="flex items-center justify-between mb-2.5">
+          <label className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
+            Select Role
+          </label>
+          <button
+            type="button"
+            onClick={() => setDemoMode(!demoMode)}
+            className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full transition-all flex items-center gap-1.5 cursor-pointer ${
+              demoMode
+                ? "bg-indigo-600 text-white shadow-sm"
+                : "neu-btn text-slate-500 hover:text-indigo-600"
+            }`}
+          >
+            <Sparkles size={11} />
+            <span>Demo Mode: {demoMode ? "ON" : "OFF"}</span>
+          </button>
+        </div>
 
         {/* Clean 5-Role Responsive Grid with Role Names Only */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
@@ -161,6 +189,31 @@ function LoginForm() {
             );
           })}
         </div>
+
+        {/* Dynamic Helper Link for Student or Teacher Selection */}
+        {selectedRole === "student" && (
+          <div className="mt-3 text-right">
+            <Link
+              href="/login/select?role=student"
+              className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1"
+            >
+              <span>Demo: Choose from 20 Class 10 Students</span>
+              <span>→</span>
+            </Link>
+          </div>
+        )}
+
+        {selectedRole === "teacher" && (
+          <div className="mt-3 text-right">
+            <Link
+              href="/login/select?role=teacher"
+              className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1"
+            >
+              <span>Demo: Choose from 4 Faculty Teachers</span>
+              <span>→</span>
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Credentials Form */}
@@ -232,6 +285,17 @@ function LoginForm() {
           <ArrowRight size={16} />
         </button>
       </form>
+
+      {/* Demo Selector Footer Link */}
+      <div className="pt-2 text-center border-t border-slate-200/60">
+        <Link
+          href="/login/select"
+          className="text-xs font-bold text-slate-500 hover:text-indigo-600 inline-flex items-center gap-1.5"
+        >
+          <Sparkles size={13} className="text-amber-500" />
+          <span>Demonstration Persona Selector (20 Students &amp; 4 Teachers) →</span>
+        </Link>
+      </div>
     </div>
   );
 }

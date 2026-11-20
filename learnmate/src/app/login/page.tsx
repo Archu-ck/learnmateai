@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth, getRolePath } from "@/context/AuthContext";
 import {
   GraduationCap,
@@ -16,62 +16,112 @@ import {
   Users,
   BarChart3,
   ShieldCheck,
-  ChevronDown,
-  ChevronUp,
+  Sparkles,
 } from "lucide-react";
+
+interface RolePreset {
+  role: string;
+  title: string;
+  email: string;
+  pass: string;
+  icon: any;
+}
+
+const presets: RolePreset[] = [
+  {
+    role: "student",
+    title: "Student",
+    email: "student@learnmate.test",
+    pass: "Password123!",
+    icon: GraduationCap,
+  },
+  {
+    role: "teacher",
+    title: "Teacher",
+    email: "teacher@learnmate.test",
+    pass: "Password123!",
+    icon: BookOpen,
+  },
+  {
+    role: "parent",
+    title: "Parent",
+    email: "parent@learnmate.test",
+    pass: "Password123!",
+    icon: Users,
+  },
+  {
+    role: "principal",
+    title: "Principal",
+    email: "principal@learnmate.test",
+    pass: "Password123!",
+    icon: BarChart3,
+  },
+  {
+    role: "admin",
+    title: "Admin Panel",
+    email: "admin@learnmate.test",
+    pass: "AdminPass123!",
+    icon: ShieldCheck,
+  },
+];
 
 function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login } = useAuth();
 
-  const [loggingInRole, setLoggingInRole] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const initialRoleParam = searchParams.get("role");
+  const initialPreset = presets.find((p) => p.role === initialRoleParam) || presets[0];
 
-  // Manual credentials form state
-  const [showManualForm, setShowManualForm] = useState(false);
-  const [manualEmail, setManualEmail] = useState("");
-  const [manualPassword, setManualPassword] = useState("");
+  const [selectedRole, setSelectedRole] = useState<string>(initialPreset.role);
+  const [email, setEmail] = useState<string>(initialPreset.email);
+  const [password, setPassword] = useState<string>(initialPreset.pass);
   const [showPassword, setShowPassword] = useState(false);
-  const [manualLoading, setManualLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleDirectRoleLogin = async (role: "principal" | "admin") => {
-    setError(null);
-    setLoggingInRole(role);
-    try {
-      const email = role === "admin" ? "admin@learnmate.test" : "principal@learnmate.test";
-      const pass = role === "admin" ? "AdminPass123!" : "Password123!";
-      const user = await login(email, pass);
-      if (user.mustChangePassword) {
-        router.push("/change-password");
-      } else {
-        router.push(getRolePath(user.role));
+  useEffect(() => {
+    if (initialRoleParam) {
+      const matched = presets.find((p) => p.role === initialRoleParam);
+      if (matched) {
+        setSelectedRole(matched.role);
+        setEmail(matched.email);
+        setPassword(matched.pass);
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to sign in. Please verify connection.");
-      setLoggingInRole(null);
     }
+  }, [initialRoleParam]);
+
+  const selectPreset = (p: RolePreset) => {
+    setSelectedRole(p.role);
+    setEmail(p.email);
+    setPassword(p.pass);
+    setError(null);
   };
 
-  const handleManualSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setManualLoading(true);
+    setLoading(true);
+
     try {
-      const user = await login(manualEmail, manualPassword);
+      const user = await login(email, password);
       if (user.mustChangePassword) {
         router.push("/change-password");
       } else {
-        router.push(getRolePath(user.role));
+        const dest = getRolePath(user.role);
+        router.push(dest);
       }
     } catch (err: any) {
       setError(err.message || "Invalid credentials. Please verify your email and password.");
     } finally {
-      setManualLoading(false);
+      setLoading(false);
     }
   };
 
+  const activePreset = presets.find((p) => p.role === selectedRole) || presets[0];
+
   return (
-    <div className="space-y-6">
+    <div className="neu-card p-7 sm:p-9 space-y-6">
       {error && (
         <div className="neu-inset p-3.5 flex items-center gap-2.5 text-xs text-rose-700 font-semibold rounded-xl">
           <AlertCircle size={16} className="text-rose-600 shrink-0" />
@@ -79,216 +129,158 @@ function LoginForm() {
         </div>
       )}
 
-      {/* Main Role Portal Tiles */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* 1. Student Portal Tile -> Opens Student Selection Page */}
-        <Link
-          href="/login/select?role=student"
-          className="neu-card p-6 rounded-2xl flex flex-col justify-between hover:scale-[1.02] hover:shadow-xl transition-all cursor-pointer group border-2 border-transparent hover:border-indigo-400"
-        >
-          <div className="space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/25 group-hover:scale-110 transition-transform">
-              <GraduationCap size={24} />
-            </div>
-            <div>
-              <h2 className="text-base font-extrabold text-slate-800 group-hover:text-indigo-600 transition-colors">
-                Student Login
-              </h2>
-              <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed">
-                Choose from all 20 Class 10 student profiles to access assignments, doubt solver, and progress.
-              </p>
-            </div>
-          </div>
-          <div className="pt-4 mt-2 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-indigo-600 group-hover:translate-x-1 transition-transform">
-            <span>Select Student Profile</span>
-            <ArrowRight size={15} />
-          </div>
-        </Link>
+      {/* Role Selection Buttons (5 Role Names Only) */}
+      <div>
+        <label className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider block mb-2.5">
+          Select Role
+        </label>
 
-        {/* 2. Teacher Portal Tile -> Opens Teacher Selection Page */}
-        <Link
-          href="/login/select?role=teacher"
-          className="neu-card p-6 rounded-2xl flex flex-col justify-between hover:scale-[1.02] hover:shadow-xl transition-all cursor-pointer group border-2 border-transparent hover:border-emerald-400"
-        >
-          <div className="space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-md shadow-emerald-500/25 group-hover:scale-110 transition-transform">
-              <BookOpen size={24} />
-            </div>
-            <div>
-              <h2 className="text-base font-extrabold text-slate-800 group-hover:text-emerald-700 transition-colors">
-                Teacher Login
-              </h2>
-              <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed">
-                Choose from all 4 faculty subject teachers for Mathematics, Science, English, and SST.
-              </p>
-            </div>
-          </div>
-          <div className="pt-4 mt-2 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-emerald-700 group-hover:translate-x-1 transition-transform">
-            <span>Select Teacher Profile</span>
-            <ArrowRight size={15} />
-          </div>
-        </Link>
-
-        {/* 3. Parent Portal Tile -> Opens Parent Selection Page */}
-        <Link
-          href="/login/select?role=parent"
-          className="neu-card p-6 rounded-2xl flex flex-col justify-between hover:scale-[1.02] hover:shadow-xl transition-all cursor-pointer group border-2 border-transparent hover:border-amber-400"
-        >
-          <div className="space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center shadow-md shadow-amber-500/25 group-hover:scale-110 transition-transform">
-              <Users size={24} />
-            </div>
-            <div>
-              <h2 className="text-base font-extrabold text-slate-800 group-hover:text-amber-700 transition-colors">
-                Parent Login
-              </h2>
-              <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed">
-                Choose any parent profile to view attendance, report cards, and remarks with student names.
-              </p>
-            </div>
-          </div>
-          <div className="pt-4 mt-2 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-amber-700 group-hover:translate-x-1 transition-transform">
-            <span>Select Parent Profile</span>
-            <ArrowRight size={15} />
-          </div>
-        </Link>
-
-        {/* 4. Principal Portal Tile -> 1-Click Direct Sign In */}
-        <button
-          type="button"
-          disabled={!!loggingInRole}
-          onClick={() => handleDirectRoleLogin("principal")}
-          className="neu-card p-6 rounded-2xl flex flex-col justify-between hover:scale-[1.02] hover:shadow-xl transition-all cursor-pointer group border-2 border-transparent hover:border-purple-400 text-left disabled:opacity-50"
-        >
-          <div className="space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-purple-500/25 group-hover:scale-110 transition-transform">
-              <BarChart3 size={24} />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <h2 className="text-base font-extrabold text-slate-800 group-hover:text-purple-700 transition-colors">
-                  Principal Portal
-                </h2>
-                <span className="text-[10px] font-black px-1.5 py-0.2 rounded-md bg-purple-50 text-purple-700 border border-purple-100">
-                  Dr. Ramesh Iyer
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed">
-                Institutional oversight, student risk alerts, AI executive intelligence, and school metrics.
-              </p>
-            </div>
-          </div>
-          <div className="pt-4 mt-2 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-purple-700 group-hover:translate-x-1 transition-transform">
-            <span>{loggingInRole === "principal" ? "Authenticating..." : "Sign In as Principal"}</span>
-            <ArrowRight size={15} />
-          </div>
-        </button>
-
-        {/* 5. Admin Portal Tile -> 1-Click Direct Sign In */}
-        <button
-          type="button"
-          disabled={!!loggingInRole}
-          onClick={() => handleDirectRoleLogin("admin")}
-          className="neu-card p-6 rounded-2xl flex flex-col justify-between hover:scale-[1.02] hover:shadow-xl transition-all cursor-pointer group border-2 border-transparent hover:border-rose-400 text-left disabled:opacity-50 sm:col-span-2 lg:col-span-1"
-        >
-          <div className="space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 text-white flex items-center justify-center shadow-md shadow-rose-500/25 group-hover:scale-110 transition-transform">
-              <ShieldCheck size={24} />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <h2 className="text-base font-extrabold text-slate-800 group-hover:text-rose-700 transition-colors">
-                  Admin Panel
-                </h2>
-                <span className="text-[10px] font-black px-1.5 py-0.2 rounded-md bg-rose-50 text-rose-700 border border-rose-100">
-                  Full Control
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed">
-                School-wide user provisioning, role permissions, timetable allocations, and audit logs.
-              </p>
-            </div>
-          </div>
-          <div className="pt-4 mt-2 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-rose-700 group-hover:translate-x-1 transition-transform">
-            <span>{loggingInRole === "admin" ? "Authenticating..." : "Sign In to Admin Panel"}</span>
-            <ArrowRight size={15} />
-          </div>
-        </button>
-      </div>
-
-      {/* Manual Email & Password Collapsible Form */}
-      <div className="pt-4">
-        <button
-          type="button"
-          onClick={() => setShowManualForm(!showManualForm)}
-          className="neu-btn px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-indigo-600 flex items-center gap-2 cursor-pointer mx-auto transition-colors"
-        >
-          <Lock size={13} />
-          <span>{showManualForm ? "Hide manual email & password login" : "Or sign in with custom email & password"}</span>
-          {showManualForm ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-        </button>
-
-        {showManualForm && (
-          <div className="neu-card p-6 rounded-2xl max-w-md mx-auto mt-4 space-y-4">
-            <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider text-center">
-              Custom Credentials
-            </h3>
-            <form onSubmit={handleManualSubmit} className="space-y-3.5">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  Email Address
-                </label>
-                <div className="relative flex items-center">
-                  <Mail size={15} className="absolute left-3.5 text-slate-400 pointer-events-none" />
-                  <input
-                    type="email"
-                    required
-                    value={manualEmail}
-                    onChange={(e) => setManualEmail(e.target.value)}
-                    placeholder="name@school.edu"
-                    className="neu-input w-full rounded-xl text-xs font-medium"
-                    style={{ paddingLeft: "38px" }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  Password
-                </label>
-                <div className="relative flex items-center">
-                  <Lock size={15} className="absolute left-3.5 text-slate-400 pointer-events-none" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    required
-                    value={manualPassword}
-                    onChange={(e) => setManualPassword(e.target.value)}
-                    placeholder="Enter password"
-                    className="neu-input w-full rounded-xl text-xs font-medium"
-                    style={{ paddingLeft: "38px", paddingRight: "38px" }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 text-slate-400 hover:text-slate-600 focus:outline-none p-1 cursor-pointer"
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                  </button>
-                </div>
-              </div>
-
+        {/* Clean 5-Role Responsive Grid with Role Names Only */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+          {presets.map((p) => {
+            const isSelected = selectedRole === p.role;
+            const Icon = p.icon;
+            return (
               <button
-                type="submit"
-                disabled={manualLoading}
-                className="neu-btn-primary w-full py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
+                key={p.role}
+                type="button"
+                onClick={() => selectPreset(p)}
+                className={`py-2.5 px-3 rounded-xl text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 ${
+                  isSelected
+                    ? "neu-inset text-indigo-700 font-extrabold shadow-inner"
+                    : "neu-btn text-slate-700 hover:text-slate-900 font-bold"
+                }`}
               >
-                <span>{manualLoading ? "Signing in..." : "Sign In with Credentials"}</span>
-                <ArrowRight size={14} />
+                <div
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                    isSelected ? "bg-indigo-600 text-white" : "bg-slate-200/80 text-slate-600"
+                  }`}
+                >
+                  <Icon size={14} />
+                </div>
+                <span className="text-xs font-bold leading-tight block">{p.title}</span>
               </button>
-            </form>
+            );
+          })}
+        </div>
+
+        {/* Dynamic Helper Link for Student, Teacher, or Parent Tile Selection */}
+        {selectedRole === "student" && (
+          <div className="mt-3 text-right">
+            <Link
+              href="/login/select?role=student"
+              className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1 cursor-pointer"
+            >
+              <span>Choose from 20 Class 10 Student Tiles</span>
+              <span>→</span>
+            </Link>
           </div>
         )}
+
+        {selectedRole === "teacher" && (
+          <div className="mt-3 text-right">
+            <Link
+              href="/login/select?role=teacher"
+              className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1 cursor-pointer"
+            >
+              <span>Choose from 4 Faculty Teacher Tiles</span>
+              <span>→</span>
+            </Link>
+          </div>
+        )}
+
+        {selectedRole === "parent" && (
+          <div className="mt-3 text-right">
+            <Link
+              href="/login/select?role=parent"
+              className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1 cursor-pointer"
+            >
+              <span>Choose from Parent Tiles (with student names)</span>
+              <span>→</span>
+            </Link>
+          </div>
+        )}
+      </div>
+
+      {/* Credentials Form */}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Email */}
+        <div>
+          <label
+            htmlFor="email"
+            className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5"
+          >
+            Email Address
+          </label>
+          <div className="relative flex items-center">
+            <Mail size={16} className="absolute left-3.5 text-slate-400 pointer-events-none z-10" />
+            <input
+              id="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@school.edu"
+              className="neu-input w-full rounded-xl text-xs sm:text-sm font-medium transition-all"
+              style={{ paddingLeft: "42px" }}
+            />
+          </div>
+        </div>
+
+        {/* Password */}
+        <div>
+          <label
+            htmlFor="password"
+            className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5"
+          >
+            Password
+          </label>
+          <div className="relative flex items-center">
+            <Lock size={16} className="absolute left-3.5 text-slate-400 pointer-events-none z-10" />
+            <input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter password"
+              className="neu-input w-full rounded-xl text-xs sm:text-sm font-medium transition-all"
+              style={{ paddingLeft: "42px", paddingRight: "42px" }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3.5 text-slate-400 hover:text-slate-600 focus:outline-none p-1 cursor-pointer transition-colors z-10"
+              tabIndex={-1}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+        </div>
+
+        {/* Sign-In Submit Button */}
+        <button
+          type="submit"
+          disabled={loading}
+          className="neu-btn-primary w-full py-3.5 text-xs sm:text-sm font-bold rounded-2xl flex items-center justify-center gap-2 cursor-pointer shadow-lg disabled:opacity-50"
+        >
+          <span>
+            {loading ? "Authenticating..." : `Sign In as ${activePreset.title}`}
+          </span>
+          <ArrowRight size={16} />
+        </button>
+      </form>
+
+      {/* Direct Tile Selector Footer Link */}
+      <div className="pt-2 text-center border-t border-slate-200/60">
+        <Link
+          href="/login/select"
+          className="text-xs font-bold text-slate-500 hover:text-indigo-600 inline-flex items-center gap-1.5 cursor-pointer"
+        >
+          <Sparkles size={13} className="text-amber-500" />
+          <span>Open Tile Selector (Students, Teachers &amp; Parents) →</span>
+        </Link>
       </div>
     </div>
   );
@@ -297,20 +289,20 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[#f0f3f8] flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8 font-sans">
-      <div className="sm:mx-auto sm:w-full sm:max-w-4xl text-center mb-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-xl text-center">
         {/* Brand Icon */}
-        <div className="inline-flex w-16 h-16 rounded-3xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-600 items-center justify-center shadow-xl shadow-indigo-500/30 mb-3 group hover:scale-105 transition-transform">
-          <GraduationCap className="w-9 h-9 text-white" />
+        <div className="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-600 items-center justify-center shadow-lg shadow-indigo-500/30 mb-3 group hover:scale-105 transition-transform">
+          <GraduationCap className="w-8 h-8 text-white" />
         </div>
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-800 tracking-tight">
+        <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">
           LearnMate LMS
         </h1>
-        <p className="mt-1.5 text-xs sm:text-sm font-bold text-slate-500 tracking-wide">
-          Select your portal to access Class 10 workspaces, curriculum, and analytics
+        <p className="mt-1 text-xs font-bold text-slate-400 uppercase tracking-widest">
+          Unified Institutional &amp; Academic Gateway
         </p>
       </div>
 
-      <div className="sm:mx-auto sm:w-full sm:max-w-4xl">
+      <div className="mt-7 sm:mx-auto sm:w-full sm:max-w-xl">
         <Suspense
           fallback={
             <div className="neu-card p-8 text-center text-xs font-bold text-slate-400 animate-pulse">

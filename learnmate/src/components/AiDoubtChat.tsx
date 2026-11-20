@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
-import NeumorphicSelect from "@/components/NeumorphicSelect";
 import {
   Bot,
   Send,
@@ -19,13 +18,9 @@ import {
   Square,
   Search,
   BookOpen,
-  ChevronDown,
+  GraduationCap,
+  HelpCircle,
 } from "lucide-react";
-
-interface TopicOption {
-  id: string;
-  name: string;
-}
 
 interface MessageItem {
   id?: string;
@@ -45,13 +40,12 @@ interface ConversationSummary {
 export default function AiDoubtChat({
   subjectId,
   subjectName,
-  topics = [],
   initialQuestion = "",
   containerClassName,
 }: {
   subjectId: string;
   subjectName: string;
-  topics?: TopicOption[];
+  topics?: any[];
   initialQuestion?: string;
   containerClassName?: string;
 }) {
@@ -59,7 +53,6 @@ export default function AiDoubtChat({
 
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
-  const [selectedTopicId, setSelectedTopicId] = useState<string>("");
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [inputQuestion, setInputQuestion] = useState(initialQuestion);
   const [searchFilter, setSearchFilter] = useState("");
@@ -115,9 +108,6 @@ export default function AiDoubtChat({
           thumbsUp: m.thumbsUp,
         }))
       );
-      if (res.conversation?.topicId) {
-        setSelectedTopicId(res.conversation.topicId);
-      }
     } catch (err: any) {
       toast(err.message || "Failed to load conversation messages", "error");
     }
@@ -157,7 +147,6 @@ export default function AiDoubtChat({
         credentials: "include",
         body: JSON.stringify({
           subjectId,
-          topicId: selectedTopicId || undefined,
           conversationId: activeConvId || undefined,
           question: q,
         }),
@@ -260,7 +249,6 @@ export default function AiDoubtChat({
     try {
       await api.post("/api/ai/doubt/save-note", {
         subjectId,
-        topicId: selectedTopicId || undefined,
         content,
       });
       toast("Saved answer into your personal revision notes!", "success");
@@ -359,7 +347,7 @@ export default function AiDoubtChat({
                   <p className="text-xs font-bold text-slate-800 truncate">{c.title}</p>
                   <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1">
                     <span className="truncate max-w-[140px] text-indigo-600 font-semibold">
-                      {c.topicId?.name || "General"}
+                      {c.topicId?.name || subjectName}
                     </span>
                     <span>{new Date(c.updatedAt).toLocaleDateString()}</span>
                   </div>
@@ -377,13 +365,13 @@ export default function AiDoubtChat({
 
         {/* Tip at bottom */}
         <div className="shrink-0 pt-3 border-t border-white/80 text-[11px] text-slate-500 font-medium">
-          💡 <strong className="text-slate-700">Hint Ladder:</strong> Ask questions step-by-step to build conceptual mastery.
+          💡 <strong className="text-slate-700">Explaining Tutor:</strong> Step-by-step guidance tailored for Class 10 mastery.
         </div>
       </div>
 
       {/* RIGHT COLUMN: Active Chat Panel */}
       <div className="lg:col-span-8 neu-card p-4 sm:p-5 flex flex-col h-full min-h-0 overflow-hidden">
-        {/* Header Strip with Topic Selector */}
+        {/* Header Strip with Topic Selector REMOVED, showing clean status & badges */}
         <div className="shrink-0 flex items-center justify-between pb-3 border-b border-white/80 gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 shadow-xs">
@@ -400,29 +388,21 @@ export default function AiDoubtChat({
                   <span>Academic Study Only</span>
                 </span>
               </h3>
-              <p className="text-[11px] text-slate-400 font-medium">{subjectName} Syllabus Guidance</p>
+              <p className="text-[11px] text-slate-400 font-medium">
+                {subjectName} • Any Study Topic Welcome
+              </p>
             </div>
           </div>
 
-          {/* Syllabus Topic Selector Dropdown */}
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider hidden sm:inline">
-              Chapter:
+            <span className="neu-pill text-[10px] font-black px-2.5 py-1 text-indigo-700 bg-indigo-50/80 flex items-center gap-1.5 border border-indigo-100 shadow-xs">
+              <Sparkles size={11} className="text-indigo-600" />
+              <span>Step-by-Step Explanations</span>
             </span>
-            <NeumorphicSelect
-              value={selectedTopicId}
-              onChange={(newTopicId) => setSelectedTopicId(newTopicId)}
-              options={[
-                { value: "", label: "All Topics / Entire Syllabus", badge: "All" },
-                ...topics.map((t, idx) => ({
-                  value: t.id,
-                  label: t.name,
-                  badge: `Ch ${idx + 1}`,
-                })),
-              ]}
-              icon={<BookOpen size={13} />}
-              minWidth="min-w-[210px] max-w-[260px]"
-            />
+            <span className="neu-pill text-[10px] font-bold px-2.5 py-1 text-slate-600 bg-white/70 hidden sm:flex items-center gap-1">
+              <GraduationCap size={12} className="text-indigo-500" />
+              <span>Class 10 Level</span>
+            </span>
           </div>
         </div>
 
@@ -434,10 +414,10 @@ export default function AiDoubtChat({
                 <Sparkles size={26} />
               </div>
               <h4 className="text-sm font-black text-slate-800">
-                Ask a Doubt in {subjectName}
+                Ask Any Study Doubt in {subjectName}
               </h4>
               <p className="text-xs text-slate-500 max-w-md leading-relaxed font-medium">
-                Stuck on a problem or formula? Ask below or select a suggestion chip. The AI tutor follows your school syllabus and uses progressive hints.
+                Stuck on a concept, formula, derivation, or problem? Ask below! VidyaAI provides guided, step-by-step Class 10 explanations with intuitive reasoning instead of blunt answers.
               </p>
             </div>
           )}
@@ -614,7 +594,7 @@ export default function AiDoubtChat({
                     handleSendMessage();
                   }
                 }}
-                placeholder={`Ask a syllabus doubt in ${subjectName}... (Press Enter to ask)`}
+                placeholder={`Ask any study doubt in ${subjectName} or school curriculum... (Press Enter to ask)`}
                 rows={1}
                 disabled={isStreaming}
                 className="neu-input w-full resize-none text-xs font-medium px-3.5 py-2.5 rounded-xl min-h-[42px] max-h-24 leading-relaxed"

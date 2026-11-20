@@ -19,13 +19,24 @@ const { executeAI } = require('../services/ai/aiExecutor');
  */
 function isNonAcademicQuery(text) {
   const q = (text || '').toLowerCase().trim();
+
+  // Explicit exceptions: Class 10 academic / social science / history / civics / general educational terms
+  // Academic questions about democracy, politics in curriculum, nationalism, etc. must NEVER be blocked!
+  const academicTerms = [
+    /\b(democracy|democratic|federalism|constitution|parliament|government|election commission|political parties|nationalism|satyagraha|congress session|revolution|civics|panchayat|judiciary|secularism)\b/i,
+    /\b(math|algebra|geometry|trigonometry|physics|chemistry|biology|science|history|geography|economics|english|grammar|literature|poem|prose|author|chapter|formula|theorem|equation|solve|calculate|derive|ncert)\b/i,
+  ];
+  if (academicTerms.some((pattern) => pattern.test(q))) {
+    return false;
+  }
+
   const nonAcademicPatterns = [
-    /\b(play a game|play game|video game|minecraft|fortnite|roblox|gta|playstation|xbox|nintendo|pubg|free fire|clash royale)\b/i,
-    /\b(favorite movie|favorite actor|favorite actress|favorite singer|celebrity|pop song|kpop|hollywood|bollywood)\b/i,
-    /\b(tell me a joke|tell a joke|crack a joke|make me laugh|funny story)\b/i,
-    /\b(dating|girlfriend|boyfriend|crush|gossip|are you single|do you love me)\b/i,
-    /\b(who won the match|cricket score|football score|ipl score|premier league|fifa)\b/i,
-    /\b(politics|politician|election|political party|who should i vote for)\b/i,
+    /\b(play a game|play game|video game|minecraft|fortnite|roblox|gta|playstation|xbox|nintendo|pubg|free fire|clash royale|valorant|bgmi|call of duty|apex legends)\b/i,
+    /\b(favorite movie|favorite actor|favorite actress|favorite singer|celebrity|pop song|kpop|bts|hollywood|bollywood|netflix series|watch movies)\b/i,
+    /\b(tell me a joke|tell a joke|crack a joke|make me laugh|funny meme|funny story)\b/i,
+    /\b(dating|girlfriend|boyfriend|crush|gossip|are you single|do you love me|marry me|romantic)\b/i,
+    /\b(who won the match|cricket score|football score|ipl score|premier league|fifa world cup|virat kohli score|rohit sharma score)\b/i,
+    /\b(who should i vote for|which party should i vote for|who is better modi or rahul)\b/i,
   ];
   return nonAcademicPatterns.some((pattern) => pattern.test(q));
 }
@@ -35,11 +46,11 @@ function isNonAcademicQuery(text) {
  */
 async function buildDoubtSystemPrompt({ student, subject, topic, classObj }) {
   const studentId = student._id;
-  const subjectId = subject._id;
+  const subjectId = subject?._id;
 
   // 1. Fetch published lesson notes for this topic (if any)
   let lessonNotesText = '';
-  if (topic) {
+  if (topic && subjectId) {
     const lessons = await Lesson.find({
       subjectId,
       topicId: topic._id,
@@ -52,102 +63,93 @@ async function buildDoubtSystemPrompt({ student, subject, topic, classObj }) {
       lessonNotesText = lessons
         .map((l) => `Lesson "${l.title}": ${l.content || ''}`)
         .join('\n\n')
-        .slice(0, 2000); // Truncate safely
+        .slice(0, 1500);
     }
   }
 
   // 2. Fetch student's weak topics in this subject (score < 65%)
-  const weakRecords = await MasteryRecord.find({
-    studentId,
-    subjectId,
-    scorePercentage: { $lt: 65 },
-  })
-    .populate('topicId', 'name')
-    .lean();
+  let weakTopicsList = '';
+  if (subjectId) {
+    const weakRecords = await MasteryRecord.find({
+      studentId,
+      subjectId,
+      scorePercentage: { $lt: 65 },
+    })
+      .populate('topicId', 'name')
+      .lean();
 
-  const weakTopicsList = weakRecords
-    .map((r) => r.topicId?.name)
-    .filter(Boolean)
-    .join(', ');
+    weakTopicsList = weakRecords
+      .map((r) => r.topicId?.name)
+      .filter(Boolean)
+      .join(', ');
+  }
 
   // 3. Fetch current active assignments for this subject to enforce AI-help levels
-  const activeAssignments = await Assignment.find({
-    subjectId,
-    dueDate: { $gte: new Date(Date.now() - 24 * 3600 * 1000) },
-  })
-    .select('title aiHelpLevel topicId')
-    .lean();
-
   let assignmentRules = '';
-  const noHelpAssignments = activeAssignments.filter((a) => a.aiHelpLevel === 'None');
-  const hintsOnlyAssignments = activeAssignments.filter((a) => a.aiHelpLevel === 'Hints only');
+  if (subjectId) {
+    const activeAssignments = await Assignment.find({
+      subjectId,
+      dueDate: { $gte: new Date(Date.now() - 24 * 3600 * 1000) },
+    })
+      .select('title aiHelpLevel topicId')
+      .lean();
 
-  if (noHelpAssignments.length > 0) {
-    assignmentRules += `\n- The following active assignments have AI-help set to "None": [${noHelpAssignments.map((a) => a.title).join(', ')}]. If the student's question relates to these assignments, politely decline to assist with solving it, explain that the teacher has reserved this assignment for independent work, and encourage them to consult their teacher directly.`;
-  }
-  if (hintsOnlyAssignments.length > 0) {
-    assignmentRules += `\n- The following active assignments have AI-help set to "Hints only": [${hintsOnlyAssignments.map((a) => a.title).join(', ')}]. NEVER provide the direct final answer or complete working solution for these. Only provide progressive hints and general concept reminders.`;
+    const noHelpAssignments = activeAssignments.filter((a) => a.aiHelpLevel === 'None');
+    const hintsOnlyAssignments = activeAssignments.filter((a) => a.aiHelpLevel === 'Hints only');
+
+    if (noHelpAssignments.length > 0) {
+      assignmentRules += `\n- The following active assignments have AI-help set to "None": [${noHelpAssignments.map((a) => a.title).join(', ')}]. If the student's question directly asks to solve these exact homework assignments, politely decline solving them outright, remind them that their teacher assigned this for independent practice, and guide them with general conceptual principles instead.`;
+    }
+    if (hintsOnlyAssignments.length > 0) {
+      assignmentRules += `\n- The following active assignments have AI-help set to "Hints only": [${hintsOnlyAssignments.map((a) => a.title).join(', ')}]. Never provide the direct final answer for these; provide conceptual guidance and a similar example with different numbers.`;
+    }
   }
 
   const className = classObj ? `${classObj.name} (Grade ${classObj.gradeLevel || 10})` : 'Grade 10';
-  const topicName = topic ? topic.name : 'All Syllabus Chapters';
+  const currentSubjectName = subject?.name || 'Class 10 Studies';
 
-  // 4. Chapter / Topic Grounding Guidance
-  let chapterDirectives = '';
-  if (topic) {
-    chapterDirectives = `
-MANDATORY CHAPTER/TOPIC DIRECTIVE (STRICT GROUNDING):
-The student has selected Chapter/Topic: "${topic.name}".
-${topic.description ? `Chapter Scope & Objectives: ${topic.description}` : ''}
-${lessonNotesText ? `Official Classroom Lesson Notes for "${topic.name}":\n"""\n${lessonNotesText}\n"""` : ''}
+  return `You are VidyaAI, an expert, patient, and highly encouraging Academic Tutor for ${student.name} in ${className}.
+Current Academic Workspace: ${currentSubjectName}${topic ? ` (Reference Chapter: ${topic.name})` : ''}
+${lessonNotesText ? `Classroom Lesson Reference:\n"""\n${lessonNotesText}\n"""\n` : ''}
+${weakTopicsList ? `Student's Revision Focus Areas: ${weakTopicsList}\n` : ''}
 
-RULES FOR DOUBT CLEARING IN "${topic.name}":
-1. STRICT CHAPTER ANCHORING: Every explanation, formula, theorem, definition, analogy, and worked step MUST strictly belong to "${topic.name}".
-2. EXPLICIT CHAPTER ACKNOWLEDGMENT: In your very first sentence or opening line, explicitly acknowledge this chapter (e.g., "In our chapter on **${topic.name}**..." or "Regarding your question in **${topic.name}**...").
-3. ACCURATE FORMULAS & SYMBOLS: State and apply the standard textbook formulas and definitions taught in "${topic.name}" for ${className} (e.g., standard NCERT / CBSE curriculum).
-4. OFF-TOPIC RE-ALIGNMENT: If the student asks about something from outside "${topic.name}", clearly clarify: "That concept belongs to another topic. In our current chapter **${topic.name}**, the relevant concept is..." and guide them back.
-5. PROGRESSIVE HINTS: Do not dump the final calculation right away. First give a conceptual hint or ask what they have tried, then provide a worked similar example with different numbers, and give the full solution only if asked. Always end with a quick check question about "${topic.name}".`;
-  } else {
-    const allTopics = await Topic.find({ subjectId }).sort({ order: 1 }).select('name').lean();
-    const topicNames = allTopics.map((t) => t.name).join(', ');
-    chapterDirectives = `
-GENERAL SYLLABUS DIRECTIVE:
-The student selected "All Topics / Entire Syllabus". The syllabus chapters for ${subject.name} are: [${topicNames}].
-1. Identify which syllabus chapter the student's question belongs to.
-2. In your opening sentence, clearly declare the chapter: "This question relates to our chapter on **[Chapter Name]**...".
-3. Answer strictly using that chapter's curriculum concepts, formulas, and textbook definitions.`;
-  }
+CORE PEDAGOGICAL DIRECTIVE (CLASS 10 EXPLANATORY TUTORING):
+1. NEVER GIVE RAW / STRAIGHT-UP ANSWERS DIRECTLY:
+   - Do NOT just spit out a final number, a one-word answer, or an unexplained equation.
+   - You are a caring, highly effective school tutor. Your primary goal is to help the student LEARN and UNDERSTAND how to arrive at the solution.
+   - Explain in a step-by-step, pedagogical way calibrated precisely for a Class 10 student (age 14–16, CBSE/board syllabus level).
 
-  return `You are VidyaAI, a dedicated, encouraging, and academically focused curriculum tutor for ${student.name} in ${className}.
-Subject: ${subject.name}
-Current Chapter / Topic: ${topicName}
-${weakTopicsList ? `Student's Areas Needing Revision: ${weakTopicsList}` : ''}
-${chapterDirectives}
+2. STEP-BY-STEP EXPLANATION BLUEPRINT:
+   Whenever a student asks any academic question, doubt, or numerical problem, structure your response as follows:
+   - Step 1: Conceptual Foundation: Clearly identify and name the concept, theorem, or rule being used in simple, intuitive terms. (e.g., "In this question, we apply the Quadratic Formula..." or "This question relates to Ohm's Law in Electricity...").
+   - Step 2: Formula / Law / Key Rule: State the relevant formula or definition clearly, explaining what each symbol represents.
+   - Step 3: Step-by-Step Breakdown: Walk through the solution with clear numbered steps. For each step, explain the reasoning ("Why are we doing this step?").
+   - Step 4: Pro-Tip / Common Pitfall: Point out a common mistake students make in Class 10 exams (e.g., sign errors, unit conversion, or confusing similar terms).
+   - Step 5: Check for Understanding: Conclude with a warm, encouraging question or small follow-up step to verify if the student grasped it.
 
-STRICT ACADEMIC-ONLY CONTENT POLICY (MANDATORY):
-You are strictly an educational study assistant. You are ONLY PERMITTED to answer questions directly related to school academics, curriculum concepts, formulas, derivations, problem-solving, textbook readings, and homework for ${subject.name}.
-YOU MUST DECLINE and REFUSE:
-- Non-study / casual conversational topics, small talk, chit-chat, personal questions, opinions on non-academic subjects
-- Entertainment, movies, celebrities, pop culture, music, television
-- Video games, gaming tips, anime, cartoons, social media, influencers
-- Politics, current affairs, controversial debates, news
-- Creative writing/roleplay unrelated to literature curriculum
-- Inappropriate, offensive, or off-topic queries
+3. ANSWER ANY STUDY-RELATED TOPIC OR SUBJECT:
+   - You are NOT restricted to a single topic or chapter. You should enthusiastically and comprehensively answer ANY academic or educational question the student asks—across Mathematics, Science (Physics, Chemistry, Biology), English Language & Literature (Prose, Poetry, Supplementary Reader, Grammar, Writing Skills), Social Science (History, Geography, Political Science/Civics, Economics), Hindi, Computer Science, general educational doubts, study techniques, revision plans, and board exam preparation.
+   - If the student is in one subject tab (e.g. Mathematics) and asks a question about another academic subject (e.g. Science or History), DO NOT refuse it! Answer it with full educational care and step-by-step Class 10 explanation.
 
-If the student's question is off-topic or not related to studying ${subject.name}, you MUST politely refuse and steer them back with this exact spirit:
-"I am your LearnMate Academic Tutor, and I am only able to help with your school studies, syllabus concepts, and homework for ${subject.name}. Let's focus on your learning! What topic or problem from your syllabus would you like help with?"
-Do NOT answer the non-academic part under any circumstances.
+4. STRICT REFUSAL FOR NON-ACADEMIC / NON-STUDY QUESTIONS:
+   - You are strictly an academic and educational tutor.
+   - YOU MUST REFUSE questions completely unrelated to studies and learning:
+     * Video games, gaming tips (Minecraft, Roblox, GTA, PUBG, Fortnite, etc.)
+     * Entertainment, movies, pop celebrities, Bollywood/Hollywood gossip, songs, television
+     * Dating, personal romance, small talk, chit-chat ("are you single", "tell me a joke")
+     * Live sports scores, match updates, betting, fantasy leagues
+     * Partisan political campaigning ("who should I vote for", "who is the best politician")
+   - For any non-academic query, refuse warmly, firmly, and politely:
+     "I am your LearnMate Academic Tutor, and I am here specifically to help you with your school studies, syllabus concepts, and homework. I cannot help with entertainment, gaming, or non-academic topics.
 
-BEHAVIOR AND PEDAGOGY RULES:
-1. Stay strictly on the syllabus for ${className} ${subject.name}.
-2. Explain concepts in simple, intuitive language tailored to their grade level. Use clear markdown and write all mathematical equations/formulas cleanly using KaTeX/standard markdown notation.
-3. HINT LADDER METHODOLOGY:
-   - Step 1: When a student first asks for help with a problem, first ask what they have tried so far, or give a gentle conceptual hint.
-   - Step 2: If they are still stuck, provide a worked similar example with DIFFERENT numbers.
-   - Step 3: Give the full step-by-step solution ONLY if the student explicitly asks for it after having tried the hints.
+Let's focus on your learning! What academic subject, chapter, or problem would you like to explore together?"
+   - Do NOT answer the non-academic query under any circumstances.
 ${assignmentRules}
-4. Always end your response with a short, friendly check question (e.g. "What would the sign become if we subtracted both sides?", "Can you tell me the next step?") to verify their understanding.
-5. Keep answers concise, clear, structured, and pedagogical. Do not overwhelm the student with walls of text.`;
+
+5. FORMATTING & NOTATION:
+   - Use clean, structured Markdown with bold key terms and bullet points.
+   - Format all mathematical equations using standard notation or KaTeX (e.g., \\(ax^2 + bx + c = 0\\), \\(D = b^2 - 4ac\\)).
+   - Keep tone warm, patient, encouraging, and pedagogically sound.`;
 }
 
 /**
@@ -161,26 +163,25 @@ async function streamDoubt(req, res) {
     if (!question || !question.trim()) {
       return res.status(400).json({ error: 'Question is required' });
     }
-    if (!subjectId) {
-      return res.status(400).json({ error: 'Subject ID is required' });
-    }
-
     const studentId = req.user._id;
 
-    // Verify student is enrolled in this subject (NEVER trust client subject)
-    const enrollment = await StudentSubject.findOne({
-      studentId,
-      subjectId,
-    }).populate('classId');
-
-    if (!enrollment && req.user.role === 'student') {
-      return res.status(403).json({ error: 'You are not enrolled in this subject.' });
+    let subject = null;
+    if (subjectId && mongoose.isValidObjectId(subjectId)) {
+      subject = await Subject.findById(subjectId);
     }
-
-    const subject = await Subject.findById(subjectId);
     if (!subject) {
-      return res.status(404).json({ error: 'Subject not found' });
+      // Fallback to student's first enrolled subject or first subject
+      const firstEnrollment = await StudentSubject.findOne({ studentId }).populate('subjectId');
+      if (firstEnrollment?.subjectId) {
+        subject = firstEnrollment.subjectId;
+      } else {
+        subject = await Subject.findOne();
+      }
     }
+
+    const enrollment = subject
+      ? await StudentSubject.findOne({ studentId, subjectId: subject._id }).populate('classId')
+      : null;
 
     let topic = null;
     if (topicId) {
@@ -207,7 +208,7 @@ async function streamDoubt(req, res) {
       const title = question.trim().slice(0, 45) + (question.trim().length > 45 ? '...' : '');
       conversation = await AIConversation.create({
         studentId,
-        subjectId,
+        subjectId: subject?._id || subjectId,
         topicId: topic?._id || null,
         title,
         schoolId: req.user.schoolId,
@@ -252,7 +253,7 @@ async function streamDoubt(req, res) {
 
     // Check if query violates academic study boundaries
     if (isNonAcademicQuery(question)) {
-      const refusalText = `I am your LearnMate Academic Tutor, and I am only able to help with your school studies, syllabus concepts, and homework for ${subject.name}.\n\nLet's focus on your learning! What academic topic or problem from your ${subject.name} syllabus would you like help with?`;
+      const refusalText = `I am your LearnMate Academic Tutor, and I am here specifically to help you with your school studies, syllabus concepts, and homework. I cannot help with entertainment, gaming, or non-academic topics.\n\nLet's focus on your learning! What academic subject, chapter, or problem would you like to explore together?`;
 
       res.write(`data: ${JSON.stringify({ meta: { conversationId: conversation._id } })}\n\n`);
       const words = refusalText.split(' ');

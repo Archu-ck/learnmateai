@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('./loadEnv');
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 const { connectDB, closeDB } = require('./db');

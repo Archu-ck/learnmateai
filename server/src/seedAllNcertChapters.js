@@ -1,4 +1,4 @@
-require('dotenv').config({ path: 'server/.env' });
+require('./loadEnv');
 const dns = require('dns');
 if (dns && dns.setServers) {
   dns.setServers(['8.8.8.8', '1.1.1.1']);

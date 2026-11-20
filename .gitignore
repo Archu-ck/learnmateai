@@ -49,3 +49,7 @@ Thumbs.db
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# uploads (keep directory structure but ignore uploaded files)
+**/uploads/assignments/*
+!**/uploads/assignments/.gitkeep

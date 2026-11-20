@@ -79,16 +79,16 @@ const sampleTeachers: TeacherProfile[] = [
   {
     name: "Sunita Menon",
     email: "sunita.menon@learnmate.test",
-    subject: "English Communicative (ENG10)",
+    subject: "English Language & Literature (ENG10)",
     classes: "Class 10-A, Class 10-B",
     isClassTeacher: "English Dept Lead",
   },
   {
     name: "Rajiv Tandon",
     email: "rajiv.tandon@learnmate.test",
-    subject: "Social Science (SST10) & Hindi (HIN10)",
+    subject: "Social Science (SST10)",
     classes: "Class 10-A, Class 10-B",
-    isClassTeacher: "Humanities Lead",
+    isClassTeacher: "Social Science Lead",
   },
 ];
 
@@ -143,8 +143,8 @@ function PersonaSelectorContent() {
           <span>Back to Standard Login</span>
         </Link>
 
-        <span className="text-xs font-bold text-slate-400 bg-white/60 px-3 py-1 rounded-full border border-slate-200">
-          Demonstration Mode
+        <span className="text-xs font-bold text-slate-500 bg-white/60 px-3 py-1 rounded-full border border-slate-200">
+          Account Selector
         </span>
       </div>
 

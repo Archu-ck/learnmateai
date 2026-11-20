@@ -16,124 +16,204 @@ import {
   Users,
   BarChart3,
   ShieldCheck,
+  Search,
+  CheckCircle2,
+  UserCheck,
   Sparkles,
 } from "lucide-react";
 
-interface RolePreset {
-  role: string;
-  title: string;
+interface StudentItem {
+  name: string;
   email: string;
-  pass: string;
-  icon: any;
+  adm: string;
+  roll: string;
+  sec: "A" | "B";
 }
 
-const presets: RolePreset[] = [
+interface TeacherItem {
+  name: string;
+  email: string;
+  subject: string;
+  classes: string;
+  tag: string;
+}
+
+interface ParentItem {
+  name: string;
+  email: string;
+  studentName: string;
+  className: string;
+}
+
+const students: StudentItem[] = [
+  // Section A
+  { name: "Aarav Sharma", email: "student@learnmate.test", adm: "ADM-10A-001", roll: "1", sec: "A" },
+  { name: "Ananya Patel", email: "ananya.p@learnmate.test", adm: "ADM-10A-002", roll: "2", sec: "A" },
+  { name: "Rohan Gupta", email: "rohan.g@learnmate.test", adm: "ADM-10A-003", roll: "3", sec: "A" },
+  { name: "Priya Nair", email: "priya.n@learnmate.test", adm: "ADM-10A-004", roll: "4", sec: "A" },
+  { name: "Kabir Singh", email: "kabir.s@learnmate.test", adm: "ADM-10A-005", roll: "5", sec: "A" },
+  { name: "Sneha Roy", email: "sneha.r@learnmate.test", adm: "ADM-10A-006", roll: "6", sec: "A" },
+  { name: "Aditya Verma", email: "aditya.v@learnmate.test", adm: "ADM-10A-007", roll: "7", sec: "A" },
+  { name: "Diya Sen", email: "diya.s@learnmate.test", adm: "ADM-10A-008", roll: "8", sec: "A" },
+  { name: "Yash Joshi", email: "yash.j@learnmate.test", adm: "ADM-10A-009", roll: "9", sec: "A" },
+  { name: "Riya Mukherjee", email: "riya.m@learnmate.test", adm: "ADM-10A-010", roll: "10", sec: "A" },
+
+  // Section B
+  { name: "Devansh Verma", email: "devansh.v@learnmate.test", adm: "ADM-10B-011", roll: "1", sec: "B" },
+  { name: "Tanvi Rao", email: "tanvi.r@learnmate.test", adm: "ADM-10B-012", roll: "2", sec: "B" },
+  { name: "Siddharth Mehta", email: "siddharth.m@learnmate.test", adm: "ADM-10B-013", roll: "3", sec: "B" },
+  { name: "Pooja Hegde", email: "pooja.h@learnmate.test", adm: "ADM-10B-014", roll: "4", sec: "B" },
+  { name: "Varun Kapoor", email: "varun.k@learnmate.test", adm: "ADM-10B-015", roll: "5", sec: "B" },
+  { name: "Ishita Bhatt", email: "ishita.b@learnmate.test", adm: "ADM-10B-016", roll: "6", sec: "B" },
+  { name: "Aryan Saxena", email: "aryan.s@learnmate.test", adm: "ADM-10B-017", roll: "7", sec: "B" },
+  { name: "Kriti Malhotra", email: "kriti.m@learnmate.test", adm: "ADM-10B-018", roll: "8", sec: "B" },
+  { name: "Rahul Deshmukh", email: "rahul.d@learnmate.test", adm: "ADM-10B-019", roll: "9", sec: "B" },
+  { name: "Simran Kaur", email: "simran.k@learnmate.test", adm: "ADM-10B-020", roll: "10", sec: "B" },
+];
+
+const teachers: TeacherItem[] = [
   {
-    role: "student",
-    title: "Student",
-    email: "student@learnmate.test",
-    pass: "Password123!",
-    icon: GraduationCap,
-  },
-  {
-    role: "teacher",
-    title: "Teacher",
+    name: "Meera Krishnan",
     email: "teacher@learnmate.test",
-    pass: "Password123!",
-    icon: BookOpen,
+    subject: "Mathematics (MATH10)",
+    classes: "Class 10-A, Class 10-B",
+    tag: "Class Teacher • 10-A",
   },
   {
-    role: "parent",
-    title: "Parent",
-    email: "parent@learnmate.test",
-    pass: "Password123!",
-    icon: Users,
+    name: "Dr. Vikram Sharma",
+    email: "vikram.sharma@learnmate.test",
+    subject: "Science (SCI10)",
+    classes: "Class 10-A, Class 10-B",
+    tag: "Class Teacher • 10-B",
   },
   {
-    role: "principal",
-    title: "Principal",
-    email: "principal@learnmate.test",
-    pass: "Password123!",
-    icon: BarChart3,
+    name: "Sunita Menon",
+    email: "sunita.menon@learnmate.test",
+    subject: "English Language & Literature (ENG10)",
+    classes: "Class 10-A, Class 10-B",
+    tag: "English Dept Lead",
   },
   {
-    role: "admin",
-    title: "Admin Panel",
-    email: "admin@learnmate.test",
-    pass: "AdminPass123!",
-    icon: ShieldCheck,
+    name: "Rajiv Tandon",
+    email: "rajiv.tandon@learnmate.test",
+    subject: "Social Science (SST10)",
+    classes: "Class 10-A, Class 10-B",
+    tag: "Social Science Lead",
   },
 ];
+
+const parents: ParentItem[] = [
+  {
+    name: "Anand Sharma",
+    email: "parent@learnmate.test",
+    studentName: "Aarav Sharma",
+    className: "Class 10-A • Roll 1",
+  },
+  {
+    name: "Priya Patel",
+    email: "parent.ananya@learnmate.test",
+    studentName: "Ananya Patel",
+    className: "Class 10-A • Roll 2",
+  },
+  {
+    name: "Rajesh Gupta",
+    email: "parent.rohan@learnmate.test",
+    studentName: "Rohan Gupta",
+    className: "Class 10-A • Roll 3",
+  },
+  {
+    name: "Sunita Verma",
+    email: "parent.devansh@learnmate.test",
+    studentName: "Devansh Verma",
+    className: "Class 10-B • Roll 1",
+  },
+];
+
+const ROLES = [
+  { key: "student", label: "Student", icon: GraduationCap },
+  { key: "teacher", label: "Teacher", icon: BookOpen },
+  { key: "parent", label: "Parent", icon: Users },
+  { key: "principal", label: "Principal", icon: BarChart3 },
+  { key: "admin", label: "Admin Panel", icon: ShieldCheck },
+] as const;
+
+type RoleKey = (typeof ROLES)[number]["key"];
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useAuth();
 
-  const initialRoleParam = searchParams.get("role");
-  const initialPreset = presets.find((p) => p.role === initialRoleParam) || presets[0];
+  const roleParam = searchParams.get("role") as RoleKey | null;
+  const [selectedRole, setSelectedRole] = useState<RoleKey>(
+    roleParam && ROLES.some((r) => r.key === roleParam) ? roleParam : "student"
+  );
 
-  const [selectedRole, setSelectedRole] = useState<string>(initialPreset.role);
-  const [email, setEmail] = useState<string>(initialPreset.email);
-  const [password, setPassword] = useState<string>(initialPreset.pass);
-  const [showPassword, setShowPassword] = useState(false);
+  const [studentSearch, setStudentSearch] = useState("");
+  const [studentSecFilter, setStudentSecFilter] = useState<"ALL" | "A" | "B">("ALL");
+  const [loggingInEmail, setLoggingInEmail] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [demoMode, setDemoMode] = useState(false);
+
+  // Manual credentials form state
+  const [showCustomLogin, setShowCustomLogin] = useState(false);
+  const [manualEmail, setManualEmail] = useState("");
+  const [manualPassword, setManualPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [manualLoading, setManualLoading] = useState(false);
 
   useEffect(() => {
-    if (initialRoleParam) {
-      const matched = presets.find((p) => p.role === initialRoleParam);
-      if (matched) {
-        setSelectedRole(matched.role);
-        setEmail(matched.email);
-        setPassword(matched.pass);
-      }
+    if (roleParam && ROLES.some((r) => r.key === roleParam)) {
+      setSelectedRole(roleParam);
     }
-  }, [initialRoleParam]);
+  }, [roleParam]);
 
-  const selectPreset = (p: RolePreset) => {
-    if (demoMode) {
-      if (p.role === "student") {
-        router.push("/login/select?role=student");
-        return;
-      }
-      if (p.role === "teacher") {
-        router.push("/login/select?role=teacher");
-        return;
-      }
-    }
-
-    setSelectedRole(p.role);
-    setEmail(p.email);
-    setPassword(p.pass);
+  const handle1ClickLogin = async (email: string, defaultPass = "Password123!") => {
     setError(null);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-
+    setLoggingInEmail(email);
     try {
-      const user = await login(email, password);
+      const user = await login(email, defaultPass);
       if (user.mustChangePassword) {
         router.push("/change-password");
       } else {
-        const dest = getRolePath(user.role);
-        router.push(dest);
+        router.push(getRolePath(user.role));
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to sign in. Please verify connection.");
+      setLoggingInEmail(null);
+    }
+  };
+
+  const handleManualSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setManualLoading(true);
+    try {
+      const user = await login(manualEmail, manualPassword);
+      if (user.mustChangePassword) {
+        router.push("/change-password");
+      } else {
+        router.push(getRolePath(user.role));
       }
     } catch (err: any) {
       setError(err.message || "Invalid credentials. Please verify your email and password.");
     } finally {
-      setLoading(false);
+      setManualLoading(false);
     }
   };
 
-  const activePreset = presets.find((p) => p.role === selectedRole) || presets[0];
+  const filteredStudents = students.filter((s) => {
+    const matchesSec = studentSecFilter === "ALL" || s.sec === studentSecFilter;
+    const q = studentSearch.toLowerCase();
+    const matchesQ =
+      s.name.toLowerCase().includes(q) ||
+      s.email.toLowerCase().includes(q) ||
+      s.adm.toLowerCase().includes(q) ||
+      s.roll.includes(q);
+    return matchesSec && matchesQ;
+  });
 
   return (
-    <div className="neu-card p-7 sm:p-9 space-y-6">
+    <div className="neu-card p-6 sm:p-8 space-y-6">
       {error && (
         <div className="neu-inset p-3.5 flex items-center gap-2.5 text-xs text-rose-700 font-semibold rounded-xl">
           <AlertCircle size={16} className="text-rose-600 shrink-0" />
@@ -141,36 +221,23 @@ function LoginForm() {
         </div>
       )}
 
-      {/* Role Selection Buttons (Role Names Only) */}
+      {/* Role Tabs */}
       <div>
-        <div className="flex items-center justify-between mb-2.5">
-          <label className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
-            Select Role
-          </label>
-          <button
-            type="button"
-            onClick={() => setDemoMode(!demoMode)}
-            className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full transition-all flex items-center gap-1.5 cursor-pointer ${
-              demoMode
-                ? "bg-indigo-600 text-white shadow-sm"
-                : "neu-btn text-slate-500 hover:text-indigo-600"
-            }`}
-          >
-            <Sparkles size={11} />
-            <span>Demo Mode: {demoMode ? "ON" : "OFF"}</span>
-          </button>
-        </div>
-
-        {/* Clean 5-Role Responsive Grid with Role Names Only */}
+        <label className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider block mb-2.5">
+          Select Role
+        </label>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-          {presets.map((p) => {
-            const isSelected = selectedRole === p.role;
-            const Icon = p.icon;
+          {ROLES.map((r) => {
+            const isSelected = selectedRole === r.key;
+            const Icon = r.icon;
             return (
               <button
-                key={p.role}
+                key={r.key}
                 type="button"
-                onClick={() => selectPreset(p)}
+                onClick={() => {
+                  setSelectedRole(r.key);
+                  setError(null);
+                }}
                 className={`py-2.5 px-3 rounded-xl text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 ${
                   isSelected
                     ? "neu-inset text-indigo-700 font-extrabold shadow-inner"
@@ -184,117 +251,312 @@ function LoginForm() {
                 >
                   <Icon size={14} />
                 </div>
-                <span className="text-xs font-bold leading-tight block">{p.title}</span>
+                <span className="text-xs font-bold leading-tight block">{r.label}</span>
               </button>
             );
           })}
         </div>
-
-        {/* Dynamic Helper Link for Student or Teacher Selection */}
-        {selectedRole === "student" && (
-          <div className="mt-3 text-right">
-            <Link
-              href="/login/select?role=student"
-              className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1"
-            >
-              <span>Demo: Choose from 20 Class 10 Students</span>
-              <span>→</span>
-            </Link>
-          </div>
-        )}
-
-        {selectedRole === "teacher" && (
-          <div className="mt-3 text-right">
-            <Link
-              href="/login/select?role=teacher"
-              className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1"
-            >
-              <span>Demo: Choose from 4 Faculty Teachers</span>
-              <span>→</span>
-            </Link>
-          </div>
-        )}
       </div>
 
-      {/* Credentials Form */}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Email */}
-        <div>
-          <label
-            htmlFor="email"
-            className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5"
-          >
-            Email Address
-          </label>
-          <div className="relative flex items-center">
-            <Mail size={16} className="absolute left-3.5 text-slate-400 pointer-events-none z-10" />
+      {/* ROLE PANELS WITH ALL NAMES TO CHOOSE FROM */}
+
+      {/* 1. STUDENT PANEL: Shows all 20 Students */}
+      {selectedRole === "student" && (
+        <div className="space-y-3.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-extrabold text-slate-800">Choose Student Account</h3>
+              <p className="text-xs text-slate-400 font-medium">
+                Click any student below to log in directly into their Class 10 portal.
+              </p>
+            </div>
+
+            {/* Section Filter Pills */}
+            <div className="flex items-center gap-1 bg-slate-200/50 p-1 rounded-xl">
+              {(["ALL", "A", "B"] as const).map((sec) => (
+                <button
+                  key={sec}
+                  type="button"
+                  onClick={() => setStudentSecFilter(sec)}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
+                    studentSecFilter === sec
+                      ? "bg-white text-indigo-700 shadow-xs"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  {sec === "ALL" ? "All (20)" : `Sec ${sec} (10)`}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Search Bar */}
+          <div className="relative">
+            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@school.edu"
-              className="neu-input w-full rounded-xl text-xs sm:text-sm font-medium transition-all"
-              style={{ paddingLeft: "42px" }}
+              type="text"
+              value={studentSearch}
+              onChange={(e) => setStudentSearch(e.target.value)}
+              placeholder="Filter by student name, roll number, or admission ID..."
+              className="neu-input !pl-9 pr-3 py-2 text-xs w-full font-medium rounded-xl"
             />
           </div>
-        </div>
 
-        {/* Password */}
-        <div>
-          <label
-            htmlFor="password"
-            className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5"
-          >
-            Password
-          </label>
-          <div className="relative flex items-center">
-            <Lock size={16} className="absolute left-3.5 text-slate-400 pointer-events-none z-10" />
-            <input
-              id="password"
-              type={showPassword ? "text" : "password"}
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter password"
-              className="neu-input w-full rounded-xl text-xs sm:text-sm font-medium transition-all"
-              style={{ paddingLeft: "42px", paddingRight: "42px" }}
-            />
+          {/* Students Scrollable Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[340px] overflow-y-auto pr-1 scrollbar-slim">
+            {filteredStudents.map((st) => {
+              const isLoggingIn = loggingInEmail === st.email;
+              return (
+                <button
+                  key={st.email}
+                  type="button"
+                  disabled={!!loggingInEmail}
+                  onClick={() => handle1ClickLogin(st.email, "Password123!")}
+                  className="neu-card-sm p-3 rounded-xl text-left transition-all hover:border-indigo-400 hover:shadow-md group cursor-pointer flex items-center justify-between gap-2 disabled:opacity-50"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-slate-800 group-hover:text-indigo-600 transition-colors truncate">
+                        {st.name}
+                      </span>
+                      <span className="text-[10px] font-black px-1.5 py-0.2 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100 shrink-0">
+                        Sec {st.sec} • Roll {st.roll}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 truncate mt-0.5">{st.adm} • {st.email}</p>
+                  </div>
+                  <span className="neu-btn px-2.5 py-1 text-[11px] font-bold text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all shrink-0">
+                    {isLoggingIn ? "Signing In..." : "Login →"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 2. TEACHER PANEL: Shows all 4 Faculty Teachers */}
+      {selectedRole === "teacher" && (
+        <div className="space-y-3.5">
+          <div>
+            <h3 className="text-sm font-extrabold text-slate-800">Choose Faculty Account</h3>
+            <p className="text-xs text-slate-400 font-medium">
+              Click any teacher below to open their subject workspace and gradebook.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {teachers.map((tc) => {
+              const isLoggingIn = loggingInEmail === tc.email;
+              return (
+                <button
+                  key={tc.email}
+                  type="button"
+                  disabled={!!loggingInEmail}
+                  onClick={() => handle1ClickLogin(tc.email, "Password123!")}
+                  className="neu-card-sm p-3.5 rounded-xl text-left transition-all hover:border-indigo-400 hover:shadow-md group cursor-pointer flex items-center justify-between gap-3 disabled:opacity-50"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs font-bold text-slate-800 group-hover:text-indigo-600 transition-colors truncate">
+                        {tc.name}
+                      </span>
+                      <span className="text-[9px] font-black px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100">
+                        {tc.tag}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-indigo-600 font-bold mt-1 truncate">{tc.subject}</p>
+                    <p className="text-[10px] text-slate-400 truncate">{tc.classes} • {tc.email}</p>
+                  </div>
+                  <span className="neu-btn px-3 py-1.5 text-xs font-bold text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all shrink-0">
+                    {isLoggingIn ? "Signing In..." : "Login →"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 3. PARENT PANEL: Shows 4 Parent Accounts */}
+      {selectedRole === "parent" && (
+        <div className="space-y-3.5">
+          <div>
+            <h3 className="text-sm font-extrabold text-slate-800">Choose Parent Account</h3>
+            <p className="text-xs text-slate-400 font-medium">
+              Click any parent below to review their child's attendance, marks, and remarks.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {parents.map((pr) => {
+              const isLoggingIn = loggingInEmail === pr.email;
+              return (
+                <button
+                  key={pr.email}
+                  type="button"
+                  disabled={!!loggingInEmail}
+                  onClick={() => handle1ClickLogin(pr.email, "Password123!")}
+                  className="neu-card-sm p-3.5 rounded-xl text-left transition-all hover:border-indigo-400 hover:shadow-md group cursor-pointer flex items-center justify-between gap-3 disabled:opacity-50"
+                >
+                  <div className="min-w-0">
+                    <span className="text-xs font-bold text-slate-800 group-hover:text-indigo-600 transition-colors block truncate">
+                      {pr.name}
+                    </span>
+                    <p className="text-[11px] text-amber-700 font-bold mt-0.5 truncate">
+                      Child: {pr.studentName}
+                    </p>
+                    <p className="text-[10px] text-slate-400 truncate">{pr.className} • {pr.email}</p>
+                  </div>
+                  <span className="neu-btn px-3 py-1.5 text-xs font-bold text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all shrink-0">
+                    {isLoggingIn ? "Signing In..." : "Login →"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 4. PRINCIPAL PANEL */}
+      {selectedRole === "principal" && (
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-sm font-extrabold text-slate-800">School Principal Portal</h3>
+            <p className="text-xs text-slate-400 font-medium">
+              Executive institutional overview, school-wide metrics, and AI executive briefings.
+            </p>
+          </div>
+
+          <div className="neu-card-sm p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-slate-800">Dr. Ramesh Iyer</span>
+                <span className="neu-pill text-[9px] font-black px-2 py-0.5 text-purple-700 bg-purple-50">
+                  Principal &amp; Head of Institution
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 font-medium">
+                Email: <span className="font-mono text-slate-700">principal@learnmate.test</span>
+              </p>
+            </div>
+
             <button
               type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3.5 text-slate-400 hover:text-slate-600 focus:outline-none p-1 cursor-pointer transition-colors z-10"
-              tabIndex={-1}
-              aria-label={showPassword ? "Hide password" : "Show password"}
+              disabled={!!loggingInEmail}
+              onClick={() => handle1ClickLogin("principal@learnmate.test", "Password123!")}
+              className="neu-btn-primary px-5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-md shrink-0"
             >
-              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              <span>{loggingInEmail === "principal@learnmate.test" ? "Authenticating..." : "Sign In as Principal"}</span>
+              <ArrowRight size={14} />
             </button>
           </div>
         </div>
+      )}
 
-        {/* Sign-In Submit Button */}
+      {/* 5. ADMIN PANEL */}
+      {selectedRole === "admin" && (
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-sm font-extrabold text-slate-800">System Administrator</h3>
+            <p className="text-xs text-slate-400 font-medium">
+              School-wide user provisioning, role permissions, timetable, and curriculum management.
+            </p>
+          </div>
+
+          <div className="neu-card-sm p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-slate-800">System Administrator</span>
+                <span className="neu-pill text-[9px] font-black px-2 py-0.5 text-rose-700 bg-rose-50">
+                  Full System Control
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 font-medium">
+                Email: <span className="font-mono text-slate-700">admin@learnmate.test</span>
+              </p>
+            </div>
+
+            <button
+              type="button"
+              disabled={!!loggingInEmail}
+              onClick={() => handle1ClickLogin("admin@learnmate.test", "AdminPass123!")}
+              className="neu-btn-primary px-5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-md shrink-0"
+            >
+              <span>{loggingInEmail === "admin@learnmate.test" ? "Authenticating..." : "Sign In to Admin Panel"}</span>
+              <ArrowRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Email & Password Collapsible Toggle */}
+      <div className="pt-2 border-t border-slate-200/60">
         <button
-          type="submit"
-          disabled={loading}
-          className="neu-btn-primary w-full py-3.5 text-xs sm:text-sm font-bold rounded-2xl flex items-center justify-center gap-2 cursor-pointer shadow-lg disabled:opacity-50"
+          type="button"
+          onClick={() => setShowCustomLogin(!showCustomLogin)}
+          className="text-xs font-bold text-slate-500 hover:text-indigo-600 flex items-center gap-1.5 cursor-pointer mx-auto transition-colors"
         >
-          <span>
-            {loading ? "Authenticating..." : `Sign In as ${activePreset.title}`}
-          </span>
-          <ArrowRight size={16} />
+          <Lock size={12} />
+          <span>{showCustomLogin ? "Hide manual email & password login" : "Or sign in with custom email & password"}</span>
         </button>
-      </form>
 
-      {/* Demo Selector Footer Link */}
-      <div className="pt-2 text-center border-t border-slate-200/60">
-        <Link
-          href="/login/select"
-          className="text-xs font-bold text-slate-500 hover:text-indigo-600 inline-flex items-center gap-1.5"
-        >
-          <Sparkles size={13} className="text-amber-500" />
-          <span>Demonstration Persona Selector (20 Students &amp; 4 Teachers) →</span>
-        </Link>
+        {showCustomLogin && (
+          <form onSubmit={handleManualSubmit} className="mt-4 space-y-3.5 max-w-md mx-auto">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                Email Address
+              </label>
+              <div className="relative flex items-center">
+                <Mail size={15} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+                <input
+                  type="email"
+                  required
+                  value={manualEmail}
+                  onChange={(e) => setManualEmail(e.target.value)}
+                  placeholder="name@school.edu"
+                  className="neu-input w-full rounded-xl text-xs font-medium"
+                  style={{ paddingLeft: "38px" }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                Password
+              </label>
+              <div className="relative flex items-center">
+                <Lock size={15} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={manualPassword}
+                  onChange={(e) => setManualPassword(e.target.value)}
+                  placeholder="Enter password"
+                  className="neu-input w-full rounded-xl text-xs font-medium"
+                  style={{ paddingLeft: "38px", paddingRight: "38px" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 text-slate-400 hover:text-slate-600 focus:outline-none p-1 cursor-pointer"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={manualLoading}
+              className="neu-btn-primary w-full py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
+            >
+              <span>{manualLoading ? "Signing in..." : "Sign In with Credentials"}</span>
+              <ArrowRight size={14} />
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );
@@ -303,7 +565,7 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[#f0f3f8] flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8 font-sans">
-      <div className="sm:mx-auto sm:w-full sm:max-w-xl text-center">
+      <div className="sm:mx-auto sm:w-full sm:max-w-2xl text-center">
         {/* Brand Icon */}
         <div className="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-600 items-center justify-center shadow-lg shadow-indigo-500/30 mb-3 group hover:scale-105 transition-transform">
           <GraduationCap className="w-8 h-8 text-white" />
@@ -316,7 +578,7 @@ export default function LoginPage() {
         </p>
       </div>
 
-      <div className="mt-7 sm:mx-auto sm:w-full sm:max-w-xl">
+      <div className="mt-7 sm:mx-auto sm:w-full sm:max-w-2xl">
         <Suspense
           fallback={
             <div className="neu-card p-8 text-center text-xs font-bold text-slate-400 animate-pulse">

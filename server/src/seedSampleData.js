@@ -127,14 +127,14 @@ async function runSeed() {
     {
       name: 'Sunita Menon',
       email: 'sunita.menon@learnmate.test',
-      primarySubject: 'English Communicative',
+      primarySubject: 'English Language & Literature',
       isClassTeacherA: false,
       isClassTeacherB: false,
     },
     {
       name: 'Rajiv Tandon',
       email: 'rajiv.tandon@learnmate.test',
-      primarySubject: 'Social Science & Hindi',
+      primarySubject: 'Social Science',
       isClassTeacherA: false,
       isClassTeacherB: false,
     },
@@ -156,13 +156,12 @@ async function runSeed() {
   console.log(`✓ Seeded ${teachers.length} teachers:`);
   teachers.forEach((t) => console.log(`   - ${t.name} (${t.email}) • ${t.primarySubject}`));
 
-  // 6. 5 Core Class 10 Subjects
+  // 6. 4 Core Class 10 Subjects
   const subjectConfigs = [
     { name: 'Mathematics', code: 'MATH10', teacherIndex: 0 },
     { name: 'Science', code: 'SCI10', teacherIndex: 1 },
-    { name: 'English Communicative', code: 'ENG10', teacherIndex: 2 },
+    { name: 'English Language & Literature', code: 'ENG10', teacherIndex: 2 },
     { name: 'Social Science', code: 'SST10', teacherIndex: 3 },
-    { name: 'Hindi Course-A', code: 'HIN10', teacherIndex: 3 },
   ];
 
   const subjects = [];

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
+import { openAttachmentInNewTab } from "@/lib/openAttachment";
 import {
   FileText,
   Sparkles,
@@ -22,6 +23,7 @@ import {
   Upload,
   Image as ImageIcon,
   Trash2,
+  ExternalLink,
 } from "lucide-react";
 
 interface TeacherClassOption {
@@ -517,16 +519,25 @@ export default function CreateAssignmentPage() {
                           key={idx}
                           className="neu-card p-3 rounded-xl flex items-center justify-between gap-3 bg-white/90"
                         >
-                          <div className="flex items-center gap-2.5 min-w-0">
+                          <div
+                            onClick={() => openAttachmentInNewTab(file.url, file.name)}
+                            className="flex items-center gap-2.5 min-w-0 cursor-pointer group flex-1"
+                            title="Click to open file in a new browser tab"
+                          >
                             <div
                               className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                                isPdf ? "bg-rose-100 text-rose-600" : "bg-blue-100 text-blue-600"
-                              }`}
+                                isPdf
+                                  ? "bg-rose-100 text-rose-600 group-hover:bg-rose-200"
+                                  : "bg-blue-100 text-blue-600 group-hover:bg-blue-200"
+                              } transition-colors`}
                             >
                               {isPdf ? <FileText size={16} /> : <ImageIcon size={16} />}
                             </div>
-                            <div className="min-w-0">
-                              <p className="text-xs font-bold text-slate-800 truncate" title={file.name}>
+                            <div className="min-w-0 flex-1">
+                              <p
+                                className="text-xs font-bold text-slate-800 truncate group-hover:text-indigo-600 transition-colors"
+                                title={file.name}
+                              >
                                 {file.name}
                               </p>
                               <p className="text-[10px] text-slate-400 font-medium">
@@ -534,14 +545,24 @@ export default function CreateAssignmentPage() {
                               </p>
                             </div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveAttachment(idx)}
-                            className="neu-btn p-1.5 rounded-lg text-slate-400 hover:text-rose-600 transition-colors shrink-0 cursor-pointer"
-                            title="Remove file"
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => openAttachmentInNewTab(file.url, file.name)}
+                              className="neu-btn p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer"
+                              title="Open file in new browser tab"
+                            >
+                              <ExternalLink size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveAttachment(idx)}
+                              className="neu-btn p-1.5 rounded-lg text-slate-400 hover:text-rose-600 transition-colors shrink-0 cursor-pointer"
+                              title="Remove file"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
                         </div>
                       );
                     })}

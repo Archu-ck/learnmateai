@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
+import { openAttachmentInNewTab } from "@/lib/openAttachment";
 import {
   FileText,
   Sparkles,
@@ -18,6 +19,7 @@ import {
   TrendingUp,
   Filter,
   Paperclip,
+  ExternalLink,
 } from "lucide-react";
 
 interface TeacherClassOption {
@@ -400,12 +402,21 @@ export default function TeacherAssignmentsManagerPage() {
                       {a.totalMarks} Marks
                     </span>
                     {a.attachments && a.attachments.length > 0 && (
-                      <span className="neu-pill px-2 py-0.2 text-[9px] font-bold text-emerald-700 bg-emerald-50 flex items-center gap-1">
-                        <Paperclip size={10} />
-                        <span>
-                          {a.attachments.length} {a.attachments.length === 1 ? "file" : "files"}
-                        </span>
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {a.attachments.map((att, attIdx) => (
+                          <button
+                            key={attIdx}
+                            type="button"
+                            onClick={() => openAttachmentInNewTab(att.url, att.name)}
+                            className="neu-pill px-2 py-0.5 text-[9px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer transition-colors"
+                            title={`Open ${att.name} in new browser tab`}
+                          >
+                            <Paperclip size={10} className="text-emerald-600" />
+                            <span className="max-w-[120px] truncate">{att.name}</span>
+                            <ExternalLink size={9} className="text-emerald-500" />
+                          </button>
+                        ))}
+                      </div>
                     )}
                   </div>
 

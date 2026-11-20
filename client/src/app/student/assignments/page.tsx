@@ -15,6 +15,7 @@ import {
   Filter,
   ArrowUpDown,
   BookOpen,
+  Paperclip,
 } from "lucide-react";
 
 interface StudentAssignmentItem {
@@ -27,6 +28,7 @@ interface StudentAssignmentItem {
   estimatedMinutes: number;
   aiHelpLevel: string;
   status: string;
+  attachments?: Array<{ name: string; url: string; size?: number }>;
   submission: {
     id: string;
     marksAwarded: number | null;
@@ -174,6 +176,14 @@ export default function StudentAssignmentsPage() {
                     <span className="neu-pill text-[10px] font-extrabold px-2 py-0.5 bg-indigo-50 text-indigo-700">
                       AI: {ass.aiHelpLevel}
                     </span>
+                    {ass.attachments && ass.attachments.length > 0 && (
+                      <span className="neu-pill text-[10px] font-bold px-2 py-0.5 bg-emerald-50 text-emerald-700 flex items-center gap-1">
+                        <Paperclip size={10} />
+                        <span>
+                          {ass.attachments.length} {ass.attachments.length === 1 ? "File attached" : "Files attached"}
+                        </span>
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 pt-1 font-medium">

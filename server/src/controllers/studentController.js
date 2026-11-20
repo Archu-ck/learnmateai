@@ -396,6 +396,7 @@ async function getStudentAssignments(req, res) {
         totalMarks: a.totalMarks,
         estimatedMinutes: a.estimatedMinutes,
         aiHelpLevel: a.aiHelpLevel,
+        attachments: a.attachments || [],
         status,
         submission: sub
           ? {

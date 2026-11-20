@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
+import { openAttachmentInNewTab } from "@/lib/openAttachment";
 import {
   FileText,
   Clock,
@@ -319,31 +320,35 @@ export default function StudentAssignmentDetailPage({
                 >
                   {isImage && (
                     <div
-                      onClick={() => setPreviewImage(att.url)}
+                      onClick={() => openAttachmentInNewTab(att.url, att.name)}
                       className="w-full h-44 rounded-xl overflow-hidden bg-slate-100 border border-slate-200/60 cursor-pointer relative group flex items-center justify-center shadow-inner"
+                      title="Click to open photo in a new tab"
                     >
                       <img
                         src={att.url}
                         alt={att.name}
                         className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
                       />
-                      <div className="absolute inset-0 bg-slate-900/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1.5 backdrop-blur-[2px]">
-                        <Eye size={15} />
-                        <span>Click to Enlarge</span>
+                      <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1.5 backdrop-blur-[2px]">
+                        <ExternalLink size={15} />
+                        <span>Open Photo in New Tab</span>
                       </div>
                     </div>
                   )}
 
-                  <div className="flex items-start gap-3">
+                  <div
+                    onClick={() => openAttachmentInNewTab(att.url, att.name)}
+                    className="flex items-start gap-3 cursor-pointer group"
+                  >
                     <div
                       className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-xs ${
-                        isPdf ? "bg-rose-100 text-rose-600" : "bg-blue-100 text-blue-600"
-                      }`}
+                        isPdf ? "bg-rose-100 text-rose-600 group-hover:bg-rose-200" : "bg-blue-100 text-blue-600 group-hover:bg-blue-200"
+                      } transition-colors`}
                     >
                       {isPdf ? <FileText size={20} /> : <ImageIcon size={20} />}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-extrabold text-slate-800 truncate" title={att.name}>
+                      <p className="text-xs font-extrabold text-slate-800 truncate group-hover:text-indigo-600 transition-colors" title={att.name}>
                         {att.name}
                       </p>
                       <p className="text-[11px] text-slate-400 font-medium mt-0.5">
@@ -354,15 +359,15 @@ export default function StudentAssignmentDetailPage({
                   </div>
 
                   <div className="flex items-center gap-2 pt-1">
-                    <a
-                      href={att.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="neu-btn flex-1 py-2 text-[11px] font-bold text-slate-700 hover:text-indigo-600 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
+                    <button
+                      type="button"
+                      onClick={() => openAttachmentInNewTab(att.url, att.name)}
+                      className="neu-btn flex-1 py-2 text-[11px] font-bold text-slate-700 hover:text-indigo-600 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                      title="Open in new browser tab"
                     >
                       <ExternalLink size={13} />
-                      <span>{isPdf ? "Open PDF" : "View Photo"}</span>
-                    </a>
+                      <span>{isPdf ? "Open PDF in New Tab" : "Open Photo in New Tab"}</span>
+                    </button>
                     <a
                       href={att.url}
                       download={att.name}

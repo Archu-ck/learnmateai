@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth, getRolePath } from "@/context/AuthContext";
@@ -8,11 +8,10 @@ import { useToast } from "@/components/Toast";
 import {
   GraduationCap,
   BookOpen,
+  Users,
   ArrowLeft,
   ArrowRight,
   Search,
-  Sparkles,
-  UserCheck,
   CheckCircle2,
   AlertCircle,
   Building,
@@ -24,7 +23,6 @@ interface StudentProfile {
   adm: string;
   roll: string;
   sec: "A" | "B";
-  note?: string;
 }
 
 interface TeacherProfile {
@@ -32,12 +30,21 @@ interface TeacherProfile {
   email: string;
   subject: string;
   classes: string;
-  isClassTeacher?: string;
+  tag: string;
+}
+
+interface ParentProfile {
+  name: string;
+  email: string;
+  studentName: string;
+  studentClass: string;
+  studentRoll: string;
+  studentAdm: string;
 }
 
 const sampleStudents: StudentProfile[] = [
   // Section A
-  { name: "Aarav Sharma", email: "student@learnmate.test", adm: "ADM-10A-001", roll: "1", sec: "A", note: "Primary demo student" },
+  { name: "Aarav Sharma", email: "student@learnmate.test", adm: "ADM-10A-001", roll: "1", sec: "A" },
   { name: "Ananya Patel", email: "ananya.p@learnmate.test", adm: "ADM-10A-002", roll: "2", sec: "A" },
   { name: "Rohan Gupta", email: "rohan.g@learnmate.test", adm: "ADM-10A-003", roll: "3", sec: "A" },
   { name: "Priya Nair", email: "priya.n@learnmate.test", adm: "ADM-10A-004", roll: "4", sec: "A" },
@@ -49,7 +56,7 @@ const sampleStudents: StudentProfile[] = [
   { name: "Riya Mukherjee", email: "riya.m@learnmate.test", adm: "ADM-10A-010", roll: "10", sec: "A" },
 
   // Section B
-  { name: "Devansh Verma", email: "devansh.v@learnmate.test", adm: "ADM-10B-011", roll: "1", sec: "B", note: "Counselor watch (71% attendance)" },
+  { name: "Devansh Verma", email: "devansh.v@learnmate.test", adm: "ADM-10B-011", roll: "1", sec: "B" },
   { name: "Tanvi Rao", email: "tanvi.r@learnmate.test", adm: "ADM-10B-012", roll: "2", sec: "B" },
   { name: "Siddharth Mehta", email: "siddharth.m@learnmate.test", adm: "ADM-10B-013", roll: "3", sec: "B" },
   { name: "Pooja Hegde", email: "pooja.h@learnmate.test", adm: "ADM-10B-014", roll: "4", sec: "B" },
@@ -67,28 +74,63 @@ const sampleTeachers: TeacherProfile[] = [
     email: "teacher@learnmate.test",
     subject: "Mathematics (MATH10)",
     classes: "Class 10-A, Class 10-B",
-    isClassTeacher: "Class Teacher • 10-A",
+    tag: "Class Teacher • 10-A",
   },
   {
     name: "Dr. Vikram Sharma",
     email: "vikram.sharma@learnmate.test",
-    subject: "Science & Chemistry (SCI10)",
+    subject: "Science (SCI10)",
     classes: "Class 10-A, Class 10-B",
-    isClassTeacher: "Class Teacher • 10-B",
+    tag: "Class Teacher • 10-B",
   },
   {
     name: "Sunita Menon",
     email: "sunita.menon@learnmate.test",
-    subject: "English Communicative (ENG10)",
+    subject: "English Language & Literature (ENG10)",
     classes: "Class 10-A, Class 10-B",
-    isClassTeacher: "English Dept Lead",
+    tag: "English Dept Lead",
   },
   {
     name: "Rajiv Tandon",
     email: "rajiv.tandon@learnmate.test",
-    subject: "Social Science (SST10) & Hindi (HIN10)",
+    subject: "Social Science (SST10)",
     classes: "Class 10-A, Class 10-B",
-    isClassTeacher: "Humanities Lead",
+    tag: "Social Science Lead",
+  },
+];
+
+const sampleParents: ParentProfile[] = [
+  {
+    name: "Rajesh Sharma",
+    email: "parent@learnmate.test",
+    studentName: "Aarav Sharma",
+    studentClass: "Class 10-A",
+    studentRoll: "Roll 1",
+    studentAdm: "ADM-10A-001",
+  },
+  {
+    name: "Sunil Gupta",
+    email: "sunil.gupta@learnmate.test",
+    studentName: "Rohan Gupta",
+    studentClass: "Class 10-A",
+    studentRoll: "Roll 3",
+    studentAdm: "ADM-10A-003",
+  },
+  {
+    name: "Rekha Verma",
+    email: "rekha.verma@learnmate.test",
+    studentName: "Devansh Verma",
+    studentClass: "Class 10-B",
+    studentRoll: "Roll 1",
+    studentAdm: "ADM-10B-011",
+  },
+  {
+    name: "Deepak Rao",
+    email: "deepak.rao@learnmate.test",
+    studentName: "Tanvi Rao",
+    studentClass: "Class 10-B",
+    studentRoll: "Roll 2",
+    studentAdm: "ADM-10B-012",
   },
 ];
 
@@ -99,9 +141,16 @@ function PersonaSelectorContent() {
   const { toast } = useToast();
 
   const roleParam = searchParams.get("role") || "student";
-  const [activeTab, setActiveTab] = useState<"student" | "teacher">(
-    roleParam === "teacher" ? "teacher" : "student"
+  const [activeTab, setActiveTab] = useState<"student" | "teacher" | "parent">(
+    roleParam === "teacher" ? "teacher" : roleParam === "parent" ? "parent" : "student"
   );
+
+  useEffect(() => {
+    if (roleParam === "teacher" || roleParam === "parent" || roleParam === "student") {
+      setActiveTab(roleParam);
+    }
+  }, [roleParam]);
+
   const [sectionFilter, setSectionFilter] = useState<"ALL" | "A" | "B">("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [loggingInEmail, setLoggingInEmail] = useState<string | null>(null);
@@ -116,7 +165,7 @@ function PersonaSelectorContent() {
         router.push(getRolePath(user.role));
       }
     } catch (err: any) {
-      toast(err.message || "Failed to sign in with this demo persona", "error");
+      toast(err.message || "Failed to sign in. Please verify connection.", "error");
       setLoggingInEmail(null);
     }
   };
@@ -132,42 +181,19 @@ function PersonaSelectorContent() {
   });
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-16 font-sans">
+    <div className="space-y-6 max-w-6xl mx-auto pb-16 font-sans">
       {/* Top Navigation Bar */}
       <div className="flex items-center justify-between">
         <Link
           href="/login"
-          className="neu-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-700 hover:text-indigo-600 flex items-center gap-2"
+          className="neu-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-700 hover:text-indigo-600 flex items-center gap-2 cursor-pointer transition-colors"
         >
           <ArrowLeft size={14} />
-          <span>Back to Standard Login</span>
+          <span>Back to Portal Login</span>
         </Link>
 
-        <span className="text-xs font-bold text-slate-400 bg-white/60 px-3 py-1 rounded-full border border-slate-200">
-          Demonstration Mode
-        </span>
-      </div>
-
-      {/* Header Banner */}
-      <div className="neu-card p-6 sm:p-7 flex flex-col md:flex-row md:items-center justify-between gap-5">
-        <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="px-2.5 py-0.5 text-[10px] font-extrabold text-indigo-700 bg-indigo-50 rounded-full border border-indigo-200/60 inline-flex items-center gap-1.5 shadow-xs">
-              <Sparkles size={11} className="text-indigo-500" />
-              <span>Persona Switcher</span>
-            </span>
-            <span className="text-xs text-slate-400 font-medium">Session 2026-2027</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">
-            Demonstration Account Selector
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-            Select any registered student or teaching faculty member to sign in with 1-click.
-          </p>
-        </div>
-
-        {/* Category Tabs */}
-        <div className="neu-inset p-1 rounded-2xl flex gap-1 self-start md:self-auto">
+        {/* Tab Switcher Pills */}
+        <div className="neu-inset p-1 rounded-2xl flex gap-1">
           <button
             onClick={() => setActiveTab("student")}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
@@ -190,157 +216,257 @@ function PersonaSelectorContent() {
             <BookOpen size={15} />
             <span>Teachers (4)</span>
           </button>
+          <button
+            onClick={() => setActiveTab("parent")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === "parent"
+                ? "neu-btn-primary text-white shadow-md shadow-indigo-500/25"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Users size={15} />
+            <span>Parents (4)</span>
+          </button>
         </div>
       </div>
 
-      {/* Student List View */}
+      {/* 1. STUDENT TILES VIEW */}
       {activeTab === "student" && (
         <div className="space-y-5">
-          {/* Search & Section Filter Bar */}
-          <div className="neu-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="relative flex-1 max-w-sm">
-              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by name, roll, or admission no..."
-                className="neu-input w-full !pl-9 pr-3 py-2 text-xs font-medium"
-              />
+          {/* Header & Filter Bar */}
+          <div className="neu-card p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
+                <span>Select Student Account</span>
+                <span className="neu-pill text-[10px] font-black px-2.5 py-0.5 text-indigo-700 bg-indigo-50">
+                  Class 10
+                </span>
+              </h1>
+              <p className="text-xs text-slate-500 font-medium mt-1">
+                Click any student tile below to immediately log in and access their dashboard, doubt solver, and courses.
+              </p>
             </div>
 
-            <div className="flex items-center gap-1 text-xs">
-              {(["ALL", "A", "B"] as const).map((sec) => (
-                <button
-                  key={sec}
-                  onClick={() => setSectionFilter(sec)}
-                  className={`px-3 py-1.5 rounded-xl font-bold cursor-pointer transition-all ${
-                    sectionFilter === sec
-                      ? "neu-inset text-indigo-700 font-extrabold"
-                      : "neu-btn text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  {sec === "ALL" ? "All Sections" : `Section ${sec}`}
-                </button>
-              ))}
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              {/* Search input */}
+              <div className="relative w-full sm:w-64">
+                <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Filter by name, roll, or admission ID..."
+                  className="neu-input w-full !pl-9 pr-3 py-2 text-xs font-medium rounded-xl"
+                />
+              </div>
+
+              {/* Section Tabs */}
+              <div className="flex items-center gap-1 bg-slate-200/50 p-1 rounded-xl shrink-0">
+                {(["ALL", "A", "B"] as const).map((sec) => (
+                  <button
+                    key={sec}
+                    onClick={() => setSectionFilter(sec)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+                      sectionFilter === sec
+                        ? "bg-white text-indigo-700 shadow-xs"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    {sec === "ALL" ? "All (20)" : `Sec ${sec} (10)`}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Students Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Student Grid Tiles */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {filteredStudents.map((s) => {
               const isLoggingIn = loggingInEmail === s.email;
-              return (
-                <div
-                  key={s.email}
-                  className="neu-card p-5 space-y-3.5 flex flex-col justify-between hover:shadow-lg transition-shadow"
-                >
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white font-extrabold text-sm flex items-center justify-center shadow-xs">
-                          {s.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                        </div>
-                        <div>
-                          <h3 className="text-sm font-extrabold text-slate-800 leading-snug">
-                            {s.name}
-                          </h3>
-                          <div className="text-[11px] text-slate-400 font-medium truncate">
-                            {s.email}
-                          </div>
-                        </div>
-                      </div>
+              const initials = s.name
+                .split(" ")
+                .map((n) => n[0])
+                .join("");
 
+              return (
+                <button
+                  key={s.email}
+                  type="button"
+                  disabled={!!loggingInEmail}
+                  onClick={() => handleDirectLogin(s.email)}
+                  className="neu-card p-5 rounded-2xl text-left flex flex-col justify-between hover:scale-[1.03] hover:shadow-xl hover:border-indigo-400 border-2 border-transparent transition-all cursor-pointer group disabled:opacity-50 min-h-[170px]"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white font-extrabold text-sm flex items-center justify-center shadow-md shadow-indigo-500/25 group-hover:scale-105 transition-transform">
+                        {initials}
+                      </div>
                       <span className="neu-inset px-2 py-0.5 rounded-lg text-[10px] font-extrabold text-indigo-700 shrink-0">
                         Class 10-{s.sec}
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-slate-500 font-medium pt-1 border-t border-slate-100">
-                      <span>Roll No. {s.roll}</span>
-                      <span className="text-slate-400 font-mono">{s.adm}</span>
-                    </div>
-
-                    {s.note && (
-                      <p className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/50">
-                        {s.note}
+                    <div>
+                      <h3 className="text-sm font-extrabold text-slate-800 group-hover:text-indigo-600 transition-colors">
+                        {s.name}
+                      </h3>
+                      <p className="text-[11px] text-slate-400 font-mono mt-0.5 truncate">
+                        Roll {s.roll} • {s.adm}
                       </p>
-                    )}
+                    </div>
                   </div>
 
-                  <button
-                    onClick={() => handleDirectLogin(s.email)}
-                    disabled={!!loggingInEmail}
-                    className="neu-btn w-full py-2.5 rounded-xl text-xs font-bold text-indigo-700 hover:text-indigo-800 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                  >
-                    <span>{isLoggingIn ? "Signing In..." : `Login as ${s.name.split(" ")[0]}`}</span>
-                    <ArrowRight size={13} />
-                  </button>
-                </div>
+                  <div className="pt-3 mt-2 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-indigo-600 group-hover:translate-x-1 transition-transform">
+                    <span>{isLoggingIn ? "Logging In..." : "Click to Sign In"}</span>
+                    <ArrowRight size={14} />
+                  </div>
+                </button>
               );
             })}
           </div>
         </div>
       )}
 
-      {/* Teacher List View */}
+      {/* 2. TEACHER TILES VIEW */}
       {activeTab === "teacher" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {sampleTeachers.map((t) => {
-            const isLoggingIn = loggingInEmail === t.email;
-            return (
-              <div
-                key={t.email}
-                className="neu-card p-6 space-y-4 flex flex-col justify-between"
-              >
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-extrabold text-base flex items-center justify-center shadow-md shadow-emerald-500/20">
-                        {t.name
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}
-                      </div>
-                      <div>
-                        <h3 className="text-base font-extrabold text-slate-800">{t.name}</h3>
-                        <p className="text-xs text-slate-400 font-medium">{t.email}</p>
-                      </div>
-                    </div>
+        <div className="space-y-5">
+          <div className="neu-card p-6">
+            <h1 className="text-2xl font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
+              <span>Select Teacher Account</span>
+              <span className="neu-pill text-[10px] font-black px-2.5 py-0.5 text-emerald-800 bg-emerald-50">
+                4 Faculty Members
+              </span>
+            </h1>
+            <p className="text-xs text-slate-500 font-medium mt-1">
+              Click any faculty tile below to enter their subject dashboard, attendance, and assignment manager.
+            </p>
+          </div>
 
-                    {t.isClassTeacher && (
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-                        {t.isClassTeacher}
-                      </span>
-                    )}
-                  </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {sampleTeachers.map((t) => {
+              const isLoggingIn = loggingInEmail === t.email;
+              const initials = t.name
+                .split(" ")
+                .map((n) => n[0])
+                .join("");
 
-                  <div className="neu-inset p-3.5 rounded-xl space-y-1.5 text-xs">
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-400 font-medium">Department</span>
-                      <span className="font-bold text-slate-800">{t.subject}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-400 font-medium">Assigned Classes</span>
-                      <span className="font-bold text-slate-800">{t.classes}</span>
-                    </div>
-                  </div>
-                </div>
-
+              return (
                 <button
-                  onClick={() => handleDirectLogin(t.email)}
+                  key={t.email}
+                  type="button"
                   disabled={!!loggingInEmail}
-                  className="neu-btn-primary w-full py-3 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-indigo-500/25 disabled:opacity-50"
+                  onClick={() => handleDirectLogin(t.email)}
+                  className="neu-card p-6 rounded-2xl text-left flex flex-col justify-between hover:scale-[1.03] hover:shadow-xl hover:border-emerald-400 border-2 border-transparent transition-all cursor-pointer group disabled:opacity-50 min-h-[260px]"
                 >
-                  <span>{isLoggingIn ? "Signing In..." : `Login as ${t.name}`}</span>
-                  <ArrowRight size={14} />
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-extrabold text-base flex items-center justify-center shadow-md shadow-emerald-500/25 group-hover:scale-105 transition-transform">
+                        {initials}
+                      </div>
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                        {t.tag}
+                      </span>
+                    </div>
+
+                    <div>
+                      <h3 className="text-base font-extrabold text-slate-800 group-hover:text-emerald-700 transition-colors">
+                        {t.name}
+                      </h3>
+                      <p className="text-xs text-indigo-600 font-bold mt-1">
+                        {t.subject}
+                      </p>
+                      <p className="text-[11px] text-slate-400 font-medium mt-1">
+                        {t.classes}
+                      </p>
+                      <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                        {t.email}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 mt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-emerald-700 group-hover:translate-x-1 transition-transform">
+                    <span>{isLoggingIn ? "Logging In..." : "Click to Sign In"}</span>
+                    <ArrowRight size={15} />
+                  </div>
                 </button>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 3. PARENT TILES VIEW */}
+      {activeTab === "parent" && (
+        <div className="space-y-5">
+          <div className="neu-card p-6">
+            <h1 className="text-2xl font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
+              <span>Select Parent Account</span>
+              <span className="neu-pill text-[10px] font-black px-2.5 py-0.5 text-amber-800 bg-amber-50">
+                4 Parent Profiles
+              </span>
+            </h1>
+            <p className="text-xs text-slate-500 font-medium mt-1">
+              Click any parent tile below to review their child's academic attendance, test results, and report card.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {sampleParents.map((pr) => {
+              const isLoggingIn = loggingInEmail === pr.email;
+              const initials = pr.name
+                .split(" ")
+                .map((n) => n[0])
+                .join("");
+
+              return (
+                <button
+                  key={pr.email}
+                  type="button"
+                  disabled={!!loggingInEmail}
+                  onClick={() => handleDirectLogin(pr.email)}
+                  className="neu-card p-6 rounded-2xl text-left flex flex-col justify-between hover:scale-[1.03] hover:shadow-xl hover:border-amber-400 border-2 border-transparent transition-all cursor-pointer group disabled:opacity-50 min-h-[260px]"
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white font-extrabold text-base flex items-center justify-center shadow-md shadow-amber-500/25 group-hover:scale-105 transition-transform">
+                        {initials}
+                      </div>
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200/60">
+                        Parent Account
+                      </span>
+                    </div>
+
+                    <div>
+                      <h3 className="text-base font-extrabold text-slate-800 group-hover:text-amber-700 transition-colors">
+                        {pr.name}
+                      </h3>
+                      <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                        {pr.email}
+                      </p>
+                    </div>
+
+                    {/* Bottom Student Name Box explicitly displayed as requested */}
+                    <div className="neu-inset p-3 rounded-xl border border-amber-100 bg-amber-50/40">
+                      <div className="text-[10px] font-extrabold uppercase tracking-wider text-amber-800/80 mb-0.5">
+                        Associated Student
+                      </div>
+                      <div className="text-xs font-black text-slate-800">
+                        {pr.studentName}
+                      </div>
+                      <div className="text-[11px] text-indigo-600 font-bold mt-0.5">
+                        {pr.studentClass} • {pr.studentRoll}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 mt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-amber-700 group-hover:translate-x-1 transition-transform">
+                    <span>{isLoggingIn ? "Logging In..." : "Click to Sign In"}</span>
+                    <ArrowRight size={15} />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
@@ -353,7 +479,7 @@ export default function PersonaSelectorPage() {
       <Suspense
         fallback={
           <div className="max-w-md mx-auto neu-card p-8 text-center text-xs font-bold text-slate-400 animate-pulse">
-            Loading persona selector...
+            Loading accounts...
           </div>
         }
       >

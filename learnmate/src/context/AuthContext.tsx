@@ -154,6 +154,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   const refreshUser = async () => {
+    // If on localhost / local IP, check if this tab has an active session in sessionStorage.
+    // When opening a new tab, sessionStorage is empty, so we deliberately do NOT auto-login from shared browser cookies.
+    // This ensures opening a new tab always opens clean /login for easy presentation!
+    if (typeof window !== "undefined") {
+      const isLocalhost =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1" ||
+        window.location.hostname.endsWith(".local");
+
+      const hasTabSession = !!window.sessionStorage.getItem("learnmate_token");
+
+      if (isLocalhost && !hasTabSession) {
+        setUser(null);
+        setPermissions([]);
+        setLoading(false);
+        return null;
+      }
+    }
+
     try {
       const res = await api.get<{ user: User; permissions: string[] }>("/api/auth/me");
       setUser(res.user);
@@ -165,6 +184,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err: any) {
       setUser(null);
       setPermissions([]);
+      if (typeof window !== "undefined") {
+        window.sessionStorage.removeItem("learnmate_token");
+      }
       return null;
     } finally {
       setLoading(false);
@@ -176,10 +198,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string): Promise<User> => {
-    const res = await api.post<{ user: User; permissions: string[] }>("/api/auth/login", {
+    const res = await api.post<{ user: User; permissions: string[]; token?: string }>("/api/auth/login", {
       email,
       password,
     });
+
+    if (typeof window !== "undefined" && res.token) {
+      window.sessionStorage.setItem("learnmate_token", res.token);
+    }
+
     setUser(res.user);
     setPermissions(res.permissions || []);
 
@@ -197,6 +224,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    if (typeof window !== "undefined") {
+      window.sessionStorage.removeItem("learnmate_token");
+    }
     try {
       await api.post("/api/auth/logout");
     } catch (e) {

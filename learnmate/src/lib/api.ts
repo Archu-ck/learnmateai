@@ -147,6 +147,16 @@ export async function apiFetch<T = any>(
     headers["Content-Type"] = "application/json";
   }
 
+  // Attach per-tab token from sessionStorage for multi-tab session isolation on localhost
+  if (isBrowser) {
+    try {
+      const token = window.sessionStorage.getItem("learnmate_token");
+      if (token && !headers["Authorization"]) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+    } catch {}
+  }
+
   const res = await fetch(endpoint, {
     ...options,
     headers,

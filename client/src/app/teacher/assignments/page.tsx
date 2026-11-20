@@ -17,6 +17,7 @@ import {
   ChevronRight,
   TrendingUp,
   Filter,
+  Paperclip,
 } from "lucide-react";
 
 interface TeacherClassOption {
@@ -39,6 +40,7 @@ interface AssignmentItem {
   aiHelpLevel: string;
   status: string;
   submissionCount?: number;
+  attachments?: Array<{ name: string; url: string; size?: number }>;
 }
 
 interface DayWorkload {
@@ -397,6 +399,14 @@ export default function TeacherAssignmentsManagerPage() {
                     <span className="neu-pill px-2 py-0.2 text-[9px] font-mono text-slate-600 bg-slate-100">
                       {a.totalMarks} Marks
                     </span>
+                    {a.attachments && a.attachments.length > 0 && (
+                      <span className="neu-pill px-2 py-0.2 text-[9px] font-bold text-emerald-700 bg-emerald-50 flex items-center gap-1">
+                        <Paperclip size={10} />
+                        <span>
+                          {a.attachments.length} {a.attachments.length === 1 ? "file" : "files"}
+                        </span>
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-3 text-[11px] text-slate-500 font-medium">

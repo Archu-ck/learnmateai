@@ -6,13 +6,17 @@ const JWT_SECRET = process.env.JWT_SECRET || 'supersecretjwtkey_learnmate_2026';
 
 async function requireAuth(req, res, next) {
   try {
-    let token = req.cookies?.token;
+    let token = null;
 
-    if (!token && req.headers.authorization) {
+    if (req.headers.authorization) {
       const parts = req.headers.authorization.split(' ');
       if (parts.length === 2 && parts[0] === 'Bearer') {
         token = parts[1];
       }
+    }
+
+    if (!token && req.cookies?.token) {
+      token = req.cookies.token;
     }
 
     if (!token) {

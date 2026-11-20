@@ -79,7 +79,6 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [demoMode, setDemoMode] = useState(false);
 
   useEffect(() => {
     if (initialRoleParam) {
@@ -93,15 +92,18 @@ function LoginForm() {
   }, [initialRoleParam]);
 
   const selectPreset = (p: RolePreset) => {
-    if (demoMode) {
-      if (p.role === "student") {
-        router.push("/login/select?role=student");
-        return;
-      }
-      if (p.role === "teacher") {
-        router.push("/login/select?role=teacher");
-        return;
-      }
+    // If user clicks Student, Teacher, or Parent role button, immediately open their dedicated tiles page!
+    if (p.role === "student") {
+      router.push("/login/select?role=student");
+      return;
+    }
+    if (p.role === "teacher") {
+      router.push("/login/select?role=teacher");
+      return;
+    }
+    if (p.role === "parent") {
+      router.push("/login/select?role=parent");
+      return;
     }
 
     setSelectedRole(p.role);
@@ -112,6 +114,21 @@ function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // If default student/teacher/parent email is present, guide them to the tiles page to choose their identity!
+    if (selectedRole === "student" && email === "student@learnmate.test") {
+      router.push("/login/select?role=student");
+      return;
+    }
+    if (selectedRole === "teacher" && email === "teacher@learnmate.test") {
+      router.push("/login/select?role=teacher");
+      return;
+    }
+    if (selectedRole === "parent" && email === "parent@learnmate.test") {
+      router.push("/login/select?role=parent");
+      return;
+    }
+
     setError(null);
     setLoading(true);
 
@@ -141,25 +158,11 @@ function LoginForm() {
         </div>
       )}
 
-      {/* Role Selection Buttons (Role Names Only) */}
+      {/* Role Selection Buttons (5 Role Names Only) */}
       <div>
-        <div className="flex items-center justify-between mb-2.5">
-          <label className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
-            Select Role
-          </label>
-          <button
-            type="button"
-            onClick={() => setDemoMode(!demoMode)}
-            className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full transition-all flex items-center gap-1.5 cursor-pointer ${
-              demoMode
-                ? "bg-indigo-600 text-white shadow-sm"
-                : "neu-btn text-slate-500 hover:text-indigo-600"
-            }`}
-          >
-            <Sparkles size={11} />
-            <span>Demo Mode: {demoMode ? "ON" : "OFF"}</span>
-          </button>
-        </div>
+        <label className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider block mb-2.5">
+          Select Role
+        </label>
 
         {/* Clean 5-Role Responsive Grid with Role Names Only */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
@@ -190,14 +193,14 @@ function LoginForm() {
           })}
         </div>
 
-        {/* Dynamic Helper Link for Student or Teacher Selection */}
+        {/* Dynamic Helper Link for Student, Teacher, or Parent Tile Selection */}
         {selectedRole === "student" && (
           <div className="mt-3 text-right">
             <Link
               href="/login/select?role=student"
-              className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1"
+              className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1 cursor-pointer"
             >
-              <span>Demo: Choose from 20 Class 10 Students</span>
+              <span>Choose from 20 Class 10 Student Tiles</span>
               <span>→</span>
             </Link>
           </div>
@@ -207,9 +210,21 @@ function LoginForm() {
           <div className="mt-3 text-right">
             <Link
               href="/login/select?role=teacher"
-              className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1"
+              className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1 cursor-pointer"
             >
-              <span>Demo: Choose from 4 Faculty Teachers</span>
+              <span>Choose from 4 Faculty Teacher Tiles</span>
+              <span>→</span>
+            </Link>
+          </div>
+        )}
+
+        {selectedRole === "parent" && (
+          <div className="mt-3 text-right">
+            <Link
+              href="/login/select?role=parent"
+              className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1 cursor-pointer"
+            >
+              <span>Choose from Parent Tiles (with student names)</span>
               <span>→</span>
             </Link>
           </div>
@@ -280,20 +295,28 @@ function LoginForm() {
           className="neu-btn-primary w-full py-3.5 text-xs sm:text-sm font-bold rounded-2xl flex items-center justify-center gap-2 cursor-pointer shadow-lg disabled:opacity-50"
         >
           <span>
-            {loading ? "Authenticating..." : `Sign In as ${activePreset.title}`}
+            {loading
+              ? "Authenticating..."
+              : selectedRole === "student" && email === "student@learnmate.test"
+              ? "Choose from 20 Student Tiles"
+              : selectedRole === "teacher" && email === "teacher@learnmate.test"
+              ? "Choose from 4 Faculty Teacher Tiles"
+              : selectedRole === "parent" && email === "parent@learnmate.test"
+              ? "Choose from Parent Tiles"
+              : `Sign In as ${activePreset.title}`}
           </span>
           <ArrowRight size={16} />
         </button>
       </form>
 
-      {/* Demo Selector Footer Link */}
+      {/* Direct Tile Selector Footer Link */}
       <div className="pt-2 text-center border-t border-slate-200/60">
         <Link
           href="/login/select"
-          className="text-xs font-bold text-slate-500 hover:text-indigo-600 inline-flex items-center gap-1.5"
+          className="text-xs font-bold text-slate-500 hover:text-indigo-600 inline-flex items-center gap-1.5 cursor-pointer"
         >
           <Sparkles size={13} className="text-amber-500" />
-          <span>Demonstration Persona Selector (20 Students &amp; 4 Teachers) →</span>
+          <span>Open Tile Selector (Students, Teachers &amp; Parents) →</span>
         </Link>
       </div>
     </div>

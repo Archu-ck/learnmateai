@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const path = require('path');
 
 const app = express();
 
@@ -28,6 +29,9 @@ app.use(
 
 app.use(express.json());
 app.use(cookieParser());
+
+// Serve static uploaded files locally
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Normalize duplicate slashes in incoming request URLs (e.g. //api/auth/login -> /api/auth/login)
 app.use((req, res, next) => {

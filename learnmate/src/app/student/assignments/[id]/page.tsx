@@ -19,6 +19,12 @@ import {
   Sparkles,
   Bot,
   User,
+  Paperclip,
+  Image as ImageIcon,
+  Download,
+  ExternalLink,
+  Eye,
+  X,
 } from "lucide-react";
 
 interface AssignmentDetailData {
@@ -70,6 +76,7 @@ export default function StudentAssignmentDetailPage({
   const [uploadedFiles, setUploadedFiles] = useState<Array<{ name: string; url: string }>>([]);
   const [submitting, setSubmitting] = useState(false);
   const [isDrafting, setIsDrafting] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   // Load Assignment Detail
   const loadDetail = async () => {
@@ -283,6 +290,95 @@ export default function StudentAssignmentDetailPage({
         )}
       </div>
 
+      {/* Attached Study Materials & Reference Files */}
+      {assignment.attachments && assignment.attachments.length > 0 && (
+        <div className="neu-card p-6 sm:p-7 space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-white/80">
+            <h3 className="text-sm font-extrabold text-slate-800 flex items-center gap-2">
+              <div className="neu-circle w-7 h-7 text-indigo-600">
+                <Paperclip size={14} />
+              </div>
+              <span>Attached Reference Materials &amp; Problem Sets</span>
+            </h3>
+            <span className="neu-pill text-[10px] font-bold text-indigo-700 bg-indigo-50/80">
+              {assignment.attachments.length} {assignment.attachments.length === 1 ? "File" : "Files"}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {assignment.attachments.map((att, idx) => {
+              const isPdf =
+                att.name.toLowerCase().endsWith(".pdf") ||
+                (att as any).type?.includes("pdf");
+              const isImage = !isPdf;
+
+              return (
+                <div
+                  key={idx}
+                  className="neu-inset p-4 rounded-2xl flex flex-col justify-between gap-3 bg-white/70"
+                >
+                  {isImage && (
+                    <div
+                      onClick={() => setPreviewImage(att.url)}
+                      className="w-full h-44 rounded-xl overflow-hidden bg-slate-100 border border-slate-200/60 cursor-pointer relative group flex items-center justify-center shadow-inner"
+                    >
+                      <img
+                        src={att.url}
+                        alt={att.name}
+                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
+                      />
+                      <div className="absolute inset-0 bg-slate-900/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1.5 backdrop-blur-[2px]">
+                        <Eye size={15} />
+                        <span>Click to Enlarge</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-xs ${
+                        isPdf ? "bg-rose-100 text-rose-600" : "bg-blue-100 text-blue-600"
+                      }`}
+                    >
+                      {isPdf ? <FileText size={20} /> : <ImageIcon size={20} />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-extrabold text-slate-800 truncate" title={att.name}>
+                        {att.name}
+                      </p>
+                      <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                        {att.size ? `${(att.size / (1024 * 1024)).toFixed(2)} MB • ` : ""}
+                        {isPdf ? "PDF Document" : "Photo / Diagram"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <a
+                      href={att.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="neu-btn flex-1 py-2 text-[11px] font-bold text-slate-700 hover:text-indigo-600 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <ExternalLink size={13} />
+                      <span>{isPdf ? "Open PDF" : "View Photo"}</span>
+                    </a>
+                    <a
+                      href={att.url}
+                      download={att.name}
+                      className="neu-btn px-3 py-2 text-[11px] font-bold text-slate-600 hover:text-slate-900 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
+                      title="Download file to computer"
+                    >
+                      <Download size={13} />
+                    </a>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Teacher Grade & Feedback Card (if graded) */}
       {isGraded && (
         <div className="neu-card p-6 sm:p-7 space-y-4 border border-emerald-200/60">
@@ -400,6 +496,40 @@ export default function StudentAssignmentDetailPage({
           </div>
         )}
       </div>
+
+      {/* Photo Enlarge Modal */}
+      {previewImage && (
+        <div
+          onClick={() => setPreviewImage(null)}
+          className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="neu-card p-4 rounded-3xl max-w-4xl w-full max-h-[90vh] flex flex-col bg-white overflow-hidden shadow-2xl space-y-3"
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <ImageIcon size={14} className="text-indigo-600" />
+                <span>Photo Viewer</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setPreviewImage(null)}
+                className="neu-btn p-1.5 rounded-xl text-slate-400 hover:text-slate-700 cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto flex items-center justify-center p-2 bg-slate-50 rounded-2xl min-h-[300px]">
+              <img
+                src={previewImage}
+                alt="Enlarged attachment"
+                className="max-w-full max-h-[75vh] object-contain rounded-xl"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

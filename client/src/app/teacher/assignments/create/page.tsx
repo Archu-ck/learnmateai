@@ -18,6 +18,10 @@ import {
   Send,
   Zap,
   HelpCircle,
+  Paperclip,
+  Upload,
+  Image as ImageIcon,
+  Trash2,
 } from "lucide-react";
 
 interface TeacherClassOption {
@@ -49,6 +53,82 @@ export default function CreateAssignmentPage() {
   const [description, setDescription] = useState("");
   const [totalMarks, setTotalMarks] = useState<number>(20);
   const [aiHelpLevel, setAiHelpLevel] = useState<"Hints only" | "Full" | "None">("Hints only");
+
+  // Local File Attachments (PDFs & Photos saved locally on PC)
+  const [attachments, setAttachments] = useState<
+    Array<{ name: string; url: string; type: string; size: number }>
+  >([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingFiles(true);
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        let uploadedFile: { name: string; url: string; type: string; size: number } | null = null;
+
+        // Try local Next.js route handler first (saves directly into public/uploads and server/uploads on local PC)
+        try {
+          const res = await fetch("/api/local-upload", {
+            method: "POST",
+            body: formData,
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.file) uploadedFile = data.file;
+          }
+        } catch {}
+
+        // Fallback to Express teacher upload route
+        if (!uploadedFile) {
+          try {
+            const res = await fetch("/api/teacher/upload-attachment", {
+              method: "POST",
+              body: formData,
+              credentials: "include",
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data.file) uploadedFile = data.file;
+            }
+          } catch {}
+        }
+
+        // Seamless fallback to base64 DataURL so presentation never fails even if offline
+        if (!uploadedFile) {
+          const dataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          uploadedFile = {
+            name: file.name,
+            url: dataUrl,
+            type: file.type || (file.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg"),
+            size: file.size,
+          };
+        }
+
+        setAttachments((prev) => [...prev, uploadedFile!]);
+        toast(`Attached "${file.name}" successfully!`, "success");
+      } catch (err: any) {
+        toast(`Failed to attach ${file.name}: ${err.message}`, "error");
+      }
+    }
+    setUploadingFiles(false);
+    e.target.value = "";
+  };
+
+  const handleRemoveAttachment = (indexToRemove: number) => {
+    setAttachments((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
 
   // Default due date: 2 days from now at 18:00
   const defaultDueDate = new Date();
@@ -238,6 +318,7 @@ export default function CreateAssignmentPage() {
         subjectId: activeClass.subjectId,
         topicId: validTopicId,
         description: description.trim(),
+        attachments,
         dueDate: dueDateTime.toISOString(),
         totalMarks: Number(totalMarks) || 20,
         estimatedMinutes: analysisResult?.estimation?.estimatedMinutes || 45,
@@ -384,6 +465,90 @@ export default function CreateAssignmentPage() {
               placeholder="Detail the questions, problems, or instructions for the students. E.g.:&#10;1. Solve the following speed-distance quadratic equations.&#10;2. Find the discriminant of 2x^2 - 4x + 3 = 0 and interpret roots.&#10;3. Verify solutions step-by-step."
               className="neu-input w-full py-2 text-xs font-medium leading-relaxed resize-y"
             />
+          </div>
+
+          {/* Local File Attachment (PDFs & Photos saved locally on PC) */}
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <Paperclip size={13} className="text-indigo-600" />
+                <span>Attach Files (PDF or Photo from PC)</span>
+              </label>
+              <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
+                <CheckCircle2 size={12} />
+                <span>Saved locally on computer</span>
+              </span>
+            </div>
+
+            <div className="neu-inset p-4 rounded-2xl space-y-3">
+              <label className="flex flex-col items-center justify-center border-2 border-dashed border-indigo-200/90 hover:border-indigo-400 rounded-xl p-5 cursor-pointer bg-white/40 hover:bg-white/70 transition-all text-center">
+                <input
+                  type="file"
+                  multiple
+                  accept="application/pdf,image/png,image/jpeg,image/webp,image/gif"
+                  onChange={handleFileUpload}
+                  disabled={uploadingFiles}
+                  className="hidden"
+                />
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-2 shadow-xs">
+                  <Upload size={18} />
+                </div>
+                <p className="text-xs font-bold text-slate-700">
+                  {uploadingFiles ? "Uploading & saving locally..." : "Click or drag PDF or photo from your computer"}
+                </p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Attach worksheets, question papers, diagrams, textbook photos (.pdf, .png, .jpg, .webp)
+                </p>
+              </label>
+
+              {/* Uploaded attachments list */}
+              {attachments.length > 0 && (
+                <div className="space-y-2 pt-1">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Attached Files ({attachments.length})
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {attachments.map((file, idx) => {
+                      const isPdf =
+                        file.name.toLowerCase().endsWith(".pdf") ||
+                        file.type?.includes("pdf");
+                      return (
+                        <div
+                          key={idx}
+                          className="neu-card p-3 rounded-xl flex items-center justify-between gap-3 bg-white/90"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div
+                              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                                isPdf ? "bg-rose-100 text-rose-600" : "bg-blue-100 text-blue-600"
+                              }`}
+                            >
+                              {isPdf ? <FileText size={16} /> : <ImageIcon size={16} />}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-slate-800 truncate" title={file.name}>
+                                {file.name}
+                              </p>
+                              <p className="text-[10px] text-slate-400 font-medium">
+                                {(file.size / (1024 * 1024)).toFixed(2)} MB • {isPdf ? "PDF Document" : "Photo"}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveAttachment(idx)}
+                            className="neu-btn p-1.5 rounded-lg text-slate-400 hover:text-rose-600 transition-colors shrink-0 cursor-pointer"
+                            title="Remove file"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Due Date & Marks */}

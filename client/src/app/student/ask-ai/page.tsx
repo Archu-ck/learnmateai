@@ -23,12 +23,6 @@ interface SubjectSummary {
   teacherName: string;
 }
 
-interface TopicItem {
-  id: string;
-  name: string;
-  chapterNumber?: number;
-}
-
 export default function StudentAskAIPage() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
@@ -48,21 +42,9 @@ export default function StudentAskAIPage() {
     return "";
   });
 
-  const [subjectTopics, setSubjectTopics] = useState<TopicItem[]>(() => {
-    const subId = selectedSubjectId || (subjects.length > 0 ? subjects[0].id : "");
-    if (!subId) return [];
-    const cached = api.getCached<{ subject: any; topics: any[] }>(`/api/student/subjects/${subId}`);
-    return (cached?.topics || []).map((t: any) => ({
-      id: t._id || t.id,
-      name: t.name || t.title,
-      chapterNumber: t.chapterNumber,
-    }));
-  });
-
   const [loadingSubjects, setLoadingSubjects] = useState<boolean>(() => {
     return subjects.length === 0;
   });
-  const [loadingTopics, setLoadingTopics] = useState<boolean>(false);
 
   // Load all enrolled subjects for the student
   useEffect(() => {
@@ -88,44 +70,6 @@ export default function StudentAskAIPage() {
     loadSubjects();
   }, [initialSubId]);
 
-  // Load topics whenever selectedSubjectId changes
-  useEffect(() => {
-    if (!selectedSubjectId) return;
-
-    const topicUrl = `/api/student/subjects/${selectedSubjectId}`;
-    const cached = api.getCached<{ subject: any; topics: any[] }>(topicUrl);
-    if (cached?.topics) {
-      setSubjectTopics(
-        cached.topics.map((t: any) => ({
-          id: t._id || t.id,
-          name: t.name || t.title,
-          chapterNumber: t.chapterNumber,
-        }))
-      );
-    }
-
-    const hasCachedTopics = !!cached?.topics?.length;
-
-    async function loadTopics() {
-      try {
-        if (!hasCachedTopics) setLoadingTopics(true);
-        const res = await api.get<{ subject: any; topics: any[] }>(topicUrl);
-        const topics = (res.topics || []).map((t) => ({
-          id: t._id || t.id,
-          name: t.name || t.title,
-          chapterNumber: t.chapterNumber,
-        }));
-        setSubjectTopics(topics);
-      } catch (err: any) {
-        // Fallback gracefully
-        if (!hasCachedTopics) setSubjectTopics([]);
-      } finally {
-        setLoadingTopics(false);
-      }
-    }
-    loadTopics();
-  }, [selectedSubjectId]);
-
   const activeSubject = subjects.find((s) => s.id === selectedSubjectId);
 
   return (
@@ -143,11 +87,11 @@ export default function StudentAskAIPage() {
               </h1>
               <span className="neu-pill px-2.5 py-0.5 text-[10px] font-black uppercase text-indigo-700 bg-indigo-50 flex items-center gap-1">
                 <Sparkles size={11} className="text-indigo-600" />
-                <span>Class 10 Syllabus Grounded</span>
+                <span>Class 10 Explanatory Tutor</span>
               </span>
             </div>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Ask doubts, receive hint ladders, and review step-by-step solutions strictly adhering to your syllabus.
+              Ask doubts in any study topic to receive step-by-step explanations, conceptual insights, and guided hints.
             </p>
           </div>
         </div>
@@ -193,7 +137,6 @@ export default function StudentAskAIPage() {
             key={activeSubject.id}
             subjectId={activeSubject.id}
             subjectName={activeSubject.name}
-            topics={subjectTopics}
             initialQuestion={initialQuery}
             containerClassName="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 min-h-0 h-full w-full overflow-hidden"
           />

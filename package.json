@@ -1,13 +1,17 @@
 {
   "name": "learnmate-root",
   "version": "1.0.0",
-  "description": "LearnMate School Admin LMS Prototype",
+  "private": true,
+  "description": "LearnMate School Admin LMS",
   "scripts": {
-    "build": "echo 'Root build'",
+    "postinstall": "npm --prefix server install && npm --prefix learnmate install",
+    "dev": "npm --prefix learnmate run dev",
     "dev:server": "npm --prefix server run dev",
-    "dev:client": "npm --prefix client run dev",
+    "dev:client": "npm --prefix learnmate run dev",
+    "dev:all": "npm run dev:server & npm run dev:client",
+    "build": "npm --prefix learnmate run build",
+    "build:client": "npm --prefix learnmate run build",
     "seed": "npm --prefix server run seed",
-    "test": "npm --prefix server test",
-    "build:client": "npm --prefix client run build"
+    "test": "npm --prefix server test"
   }
 }

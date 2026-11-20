@@ -92,6 +92,20 @@ function LoginForm() {
   }, [initialRoleParam]);
 
   const selectPreset = (p: RolePreset) => {
+    // If user clicks Student, Teacher, or Parent role button, immediately open their dedicated tiles page!
+    if (p.role === "student") {
+      router.push("/login/select?role=student");
+      return;
+    }
+    if (p.role === "teacher") {
+      router.push("/login/select?role=teacher");
+      return;
+    }
+    if (p.role === "parent") {
+      router.push("/login/select?role=parent");
+      return;
+    }
+
     setSelectedRole(p.role);
     setEmail(p.email);
     setPassword(p.pass);
@@ -100,6 +114,21 @@ function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // If default student/teacher/parent email is present, guide them to the tiles page to choose their identity!
+    if (selectedRole === "student" && email === "student@learnmate.test") {
+      router.push("/login/select?role=student");
+      return;
+    }
+    if (selectedRole === "teacher" && email === "teacher@learnmate.test") {
+      router.push("/login/select?role=teacher");
+      return;
+    }
+    if (selectedRole === "parent" && email === "parent@learnmate.test") {
+      router.push("/login/select?role=parent");
+      return;
+    }
+
     setError(null);
     setLoading(true);
 
@@ -266,7 +295,15 @@ function LoginForm() {
           className="neu-btn-primary w-full py-3.5 text-xs sm:text-sm font-bold rounded-2xl flex items-center justify-center gap-2 cursor-pointer shadow-lg disabled:opacity-50"
         >
           <span>
-            {loading ? "Authenticating..." : `Sign In as ${activePreset.title}`}
+            {loading
+              ? "Authenticating..."
+              : selectedRole === "student" && email === "student@learnmate.test"
+              ? "Choose from 20 Student Tiles"
+              : selectedRole === "teacher" && email === "teacher@learnmate.test"
+              ? "Choose from 4 Faculty Teacher Tiles"
+              : selectedRole === "parent" && email === "parent@learnmate.test"
+              ? "Choose from Parent Tiles"
+              : `Sign In as ${activePreset.title}`}
           </span>
           <ArrowRight size={16} />
         </button>
